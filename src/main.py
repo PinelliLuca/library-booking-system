@@ -21,8 +21,8 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 api = Api(app)
 
-# Importa modelli
-from models import ParkingSpot
+from seats import seats_bp
+app.register_blueprint(seats_bp)
 
 # Crea le tabelle se non esistono
 with app.app_context():
