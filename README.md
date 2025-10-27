@@ -33,3 +33,16 @@ A complete IoT-based system for monitoring seat availability in a university lib
 1. Clone the repo:
    ```bash
    git clone https://github.com/your-username/smart-library-seat-tracker.git
+2. Open terminal and use:
+- **Create env**:
+```bash  
+py -3.12 -m venv IoT_env
+```
+- **Activate env**: 
+```bash  
+IoT_env\Scripts\activate
+```
+- **Install requirements**: 
+ ```bash  
+pip install -r requirements.txt
+```
