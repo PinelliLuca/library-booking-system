@@ -1,3 +1,10 @@
+# Ambiente virtuale
+IoT_env/
+venv/
+.env
+# JetBrains IDEs (PyCharm, IntelliJ, etc.)
+.idea/
+*.iml
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
