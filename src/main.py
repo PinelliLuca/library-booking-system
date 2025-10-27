@@ -4,6 +4,8 @@ from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 import os
 
+from werkzeug.utils import send_from_directory
+
 # Carica variabili da .env
 load_dotenv()
 
@@ -23,7 +25,9 @@ api = Api(app)
 
 from seats import seats_bp
 app.register_blueprint(seats_bp)
-
+@app.route("/frontend")
+def serve_frontend():
+    return send_from_directory("../frontend", "index.html")
 # Crea le tabelle se non esistono
 with app.app_context():
     db.create_all()

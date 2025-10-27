@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>IoT Seats</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+    }
+    .row-container {
+      background-color: #eee;
+      padding: 10px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+    .seat {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background-color: green;
+    }
+    .seat.occupied {
+      background-color: red;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <h1>Visualizzazione Posti</h1>
+    <div v-for="(row, rowIndex) in seatRows" :key="rowIndex" class="row-container">
+      <div
+        v-for="seat in row"
+        :key="seat.id"
+        class="seat"
+        :class="{ occupied: seat.is_occupied }"
+      ></div>
+    </div>
+  </div>
+
+  <script>
+    const { createApp } = Vue;
+
+    createApp({
+      data() {
+        return {
+          seats: [],
+        };
+      },
+      computed: {
+        seatRows() {
+          const seatsPerRow = 5; // personalizzabile
+          const rows = [];
+          for (let i = 0; i < this.seats.length; i += seatsPerRow) {
+            rows.push(this.seats.slice(i, i + seatsPerRow));
+          }
+          return rows;
+        },
+      },
+      mounted() {
+        fetch("http://localhost:5000/seats")
+          .then((res) => res.json())
+          .then((data) => {
+            this.seats = data;
+          });
+      },
+    }).mount("#app");
+  </script>
+</body>
+</html>
