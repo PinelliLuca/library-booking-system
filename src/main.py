@@ -2,8 +2,6 @@ from flask import Flask
 from flask_smorest import Api
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
-import os
-
 from werkzeug.utils import send_from_directory
 
 # Carica variabili da .env
@@ -23,7 +21,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 api = Api(app)
 
-from seats import seats_bp
+from src.backend.seat.service import seats_bp
 app.register_blueprint(seats_bp)
 @app.route("/frontend")
 def serve_frontend():

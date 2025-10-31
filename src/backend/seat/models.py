@@ -1,4 +1,5 @@
-from main import db
+from src.main import db
+
 
 class Seat(db.Model):
     __tablename__ = "seats"
