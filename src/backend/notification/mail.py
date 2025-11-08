@@ -26,7 +26,7 @@ def send_email(subject, body, recipients=None):
         subject=subject,
         recipients=recipients,
         body=body,
-        sender=current_app.config.get("MAIL_DEFAULT_SENDER", "noreply@example.com")
+        sender=current_app.config.get("MAIL_DEFAULT_SENDER")
     )
 
     # Invia l'email
