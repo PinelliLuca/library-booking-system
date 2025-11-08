@@ -10,8 +10,7 @@ def get_all_seats():
     seats = Seat.query.all()
     return jsonify([
         {
-            "row": seat.row,
-            "column": seat.column,
+            "id": seat.id,
             "is_occupied": seat.is_occupied
         } for seat in seats
     ])
@@ -22,8 +21,7 @@ def get_single_seat(row, column):
     if not seat:
         return jsonify({"error": "Seat not found"}), 404
     return jsonify({
-        "row": seat.row,
-        "column": seat.column,
+        "id":seat.id,
         "is_occupied": seat.is_occupied
     })
 # PATCH: modifica lo stato di occupazione
