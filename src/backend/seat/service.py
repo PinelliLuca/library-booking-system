@@ -36,30 +36,6 @@ def update_seat_status(seat_id):
     data = request.get_json()
     if "is_occupied" not in data:
         return jsonify({"error": "Missing 'is_occupied' field"}), 400
-
-    seat.is_occupied = data["is_occupied"]
-    db.session.commit()
-    return jsonify({
-        "id": seat.id,
-        "is_occupied": seat.is_occupied
-    })
-"""
-es di chiamata che verrà eseguita dall'arduino
-fetch("http://localhost:5000/seats/12", {
-  method: "PATCH",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ is_occupied: true })
-});
-"""
-
-@seats_bp.route('/book', methods=['POST'])
-#@auth_required
-def book_seat():
-    """
-    Prenota un posto e invia un'email di conferma.
-    """
-    data = request.json
-    seat_id = data.get('seat_id')
     booking = data.get('booking')
     if not seat_id:
         return jsonify({"error": "Missing 'seat_id'"}), 400
@@ -78,12 +54,25 @@ def book_seat():
     else:
         seat.is_occupied = True
         db.session.commit()
-    # Invia l'email di conferma
+    
     try:
         send_email(
             subject="Conferma prenotazione",
             body=f"Hai prenotato il posto {seat_id}.",
         )
-        return jsonify({"message": "Posto prenotato e email inviata"}), 200
+        return jsonify({
+        "id": seat.id,
+        "is_occupied": seat.is_occupied
+    })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+   
+"""
+es di chiamata che verrà eseguita dall'arduino
+fetch("http://localhost:5000/seats/12", {
+  method: "PATCH",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ is_occupied: true })
+});
+"""
