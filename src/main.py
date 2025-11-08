@@ -6,7 +6,7 @@ from werkzeug.utils import send_from_directory
 from flask_jwt_extended import JWTManager
 from datetime import timedelta
 from src.backend.auth.login import login_bp
-from src.backend.auth.user import user_bp
+
 from flask_mail import Mail
 import os
 from src.backend.seat.service import seats_bp
@@ -39,7 +39,6 @@ app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@ex
 
 jwt = JWTManager(app)
 app.register_blueprint(login_bp)
-app.register_blueprint(user_bp)
 # Configurazione SQLite
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///../instance/iot.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
