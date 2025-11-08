@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
-from models import Seat
-from extensions import db
+from src.main import db
+from src.backend.seat.models import Seat
 
 seats_bp = Blueprint("seats", __name__, url_prefix="/seats")
 
