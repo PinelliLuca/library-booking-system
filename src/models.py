@@ -1,9 +1,11 @@
-from main import db
+from extensions import db
 
 class Seat(db.Model):
     __tablename__ = "seats"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    row = db.Column(db.Integer, nullable=False)
+    column = db.Column(db.Integer, nullable=False)
     is_occupied = db.Column(db.Boolean, default=False)
 
     def __repr__(self):

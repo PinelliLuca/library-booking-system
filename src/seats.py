@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from models import Seat
-from main import db
+from extensions import db
 
 seats_bp = Blueprint("seats", __name__, url_prefix="/seats")
 
@@ -9,6 +9,7 @@ def get_all_seats():
     seats = Seat.query.all()
     return jsonify([
         {
+            "id": seat.id,
             "row": seat.row,
             "column": seat.column,
             "is_occupied": seat.is_occupied
@@ -21,6 +22,7 @@ def get_single_seat(row, column):
     if not seat:
         return jsonify({"error": "Seat not found"}), 404
     return jsonify({
+        "id": seat.id,
         "row": seat.row,
         "column": seat.column,
         "is_occupied": seat.is_occupied

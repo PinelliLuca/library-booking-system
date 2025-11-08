@@ -1,5 +1,6 @@
 # Ambiente virtuale
 IoT_env/
+iot_venv/
 venv/
 .env
 # JetBrains IDEs (PyCharm, IntelliJ, etc.)

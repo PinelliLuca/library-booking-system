@@ -1,10 +1,12 @@
-from flask import Flask
+from flask import Flask, send_from_directory
 from flask_smorest import Api
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 import os
+from extensions import db
+import models
 
-from werkzeug.utils import send_from_directory
+# from werkzeug.utils import send_from_directory
 
 # Carica variabili da .env
 load_dotenv()
@@ -20,17 +22,18 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///../instance/iot.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # Inizializza estensioni
-db = SQLAlchemy(app)
+db.init_app(app)
 api = Api(app)
+
+# Crea le tabelle se non esistono
+with app.app_context():
+    db.create_all()
 
 from seats import seats_bp
 app.register_blueprint(seats_bp)
 @app.route("/frontend")
 def serve_frontend():
-    return send_from_directory("../frontend", "index.html")
-# Crea le tabelle se non esistono
-with app.app_context():
-    db.create_all()
+    return send_from_directory("frontend", "index.html")
 
 # Endpoint di test
 @app.route("/")
