@@ -6,11 +6,9 @@ from werkzeug.utils import send_from_directory
 from flask_jwt_extended import JWTManager
 from datetime import timedelta
 from src.backend.auth.login import login_bp
-
 from flask_mail import Mail
 import os
 from src.backend.seat.service import seats_bp
-from flask import jsonify
 from flask import jsonify
 from werkzeug.exceptions import HTTPException
 
@@ -26,9 +24,6 @@ app.config["OPENAPI_VERSION"] = "3.0.3"
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')  # Cambia con una chiave sicura
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=120)
 
-
-mail=Mail(app)
-
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
 app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'true').lower() in ['true', '1', 't']
@@ -37,16 +32,16 @@ app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@example.com')
 
-jwt = JWTManager(app)
 app.register_blueprint(login_bp)
 # Configurazione SQLite
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///../instance/iot.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # Inizializza estensioni
-db = SQLAlchemy(app)
+db.init_app(app)
 api = Api(app)
-
+jwt = JWTManager(app)
+mail=Mail(app)
 # Gestione delle eccezioni HTTP
 @app.errorhandler(HTTPException)
 def handle_http_exception(e):
