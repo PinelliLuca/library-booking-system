@@ -1,6 +1,6 @@
 from flask import Flask
 from flask_smorest import Api
-from flask_sqlalchemy import SQLAlchemy
+from src.backend.common.db import db
 from dotenv import load_dotenv
 from werkzeug.utils import send_from_directory
 from flask_jwt_extended import JWTManager
