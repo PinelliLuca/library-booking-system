@@ -6,13 +6,15 @@ from dotenv import load_dotenv
 from flask_jwt_extended import JWTManager
 from datetime import timedelta
 from src.backend.auth.login import login_bp
-# from src.backend.auth.user import user_bp
+
 from flask_mail import Mail
 import os
 from src.backend.seat.service import seats_bp
 from flask import jsonify
 from src.extensions import db
 
+from flask import jsonify
+from werkzeug.exceptions import HTTPException
 
 # Carica variabili da .env
 load_dotenv()
@@ -35,11 +37,19 @@ app.config["OPENAPI_VERSION"] = "3.0.3"
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')  # Cambia con una chiave sicura
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=120)
 
+
 mail=Mail(app)
+
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'true').lower() in ['true', '1', 't']
+app.config['MAIL_USE_SSL'] = os.getenv('MAIL_USE_SSL', 'false').lower() in ['true', '1', 't']
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@example.com')
 
 jwt = JWTManager(app)
 app.register_blueprint(login_bp)
-# app.register_blueprint(user_bp)
 # Configurazione SQLite
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -48,6 +58,22 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 # db = SQLAlchemy(app)
 db.init_app(app)
 api = Api(app)
+
+# Gestione delle eccezioni HTTP
+@app.errorhandler(HTTPException)
+def handle_http_exception(e):
+    """
+    Gestisce le eccezioni HTTP restituendo un messaggio di errore standard.
+    """
+    return jsonify({"error": e.name, "message": e.description}), e.code
+
+# Gestione delle eccezioni generiche
+@app.errorhandler(Exception)
+def handle_generic_exception(e):
+    """
+    Gestisce le eccezioni generiche restituendo un messaggio di errore standard.
+    """
+    return jsonify({"error": "Internal Server Error", "message": str(e)}), 500
 
 # Gestione degli errori JWT
 @jwt.expired_token_loader
