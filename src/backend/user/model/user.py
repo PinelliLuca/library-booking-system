@@ -8,7 +8,5 @@ class User(db.Model):
     first_name = db.Column(db.String, nullable=False)
     last_name = db.Column(db.String, nullable=False)
     token = db.Column(db.String, nullable=False)
-    mail = db.Column(db.Boolean, default=False)
-   # upd_user=db.Column(db.String)
-   # ins_user=db.Column(db.String)
+    mail = db.Column(db.String, unique=True, nullable=False)
     ins_istance=db.Column(db.DateTime, default=db.func.current_timestamp())
