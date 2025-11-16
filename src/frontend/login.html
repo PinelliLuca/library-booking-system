@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <title>Login - IoT Seats</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <style>
+    body { font-family: Inter, system-ui, sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; margin:0; background:#f4f6fb; }
+    .card { width:360px; padding:20px; background:#fff; border-radius:8px; box-shadow:0 6px 18px rgba(20,40,60,0.08); }
+    h2 { margin:0 0 14px 0; font-size:18px; }
+    label { display:block; margin-top:8px; font-size:13px; color:#333; }
+    input { width:100%; padding:10px; margin-top:6px; border:1px solid #ddd; border-radius:6px; box-sizing:border-box; }
+    button { margin-top:14px; width:100%; padding:10px; background:#0b5ed7; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600; }
+    .muted { font-size:13px; color:#666; margin-top:10px; text-align:center; }
+    .error { color:#b00020; margin-top:8px; font-size:13px; }
+    .small { font-size:12px; color:#666; text-align:center; margin-top:10px; }
+    a.link { color:#0b5ed7; text-decoration:none; }
+  </style>
+</head>
+<body>
+  <div id="app" class="card">
+    <h2>Accesso - IoT Seats</h2>
+
+    <label>Email
+      <input v-model="email" type="email" placeholder="tuo@esempio.it" />
+    </label>
+
+    <label>Password
+      <input v-model="password" type="password" placeholder="••••••••" />
+    </label>
+
+    <button @click="login" :disabled="loading">
+      <span v-if="!loading">Accedi</span>
+      <span v-else>Caricamento…</span>
+    </button>
+
+    <div class="error" v-if="error">{{ error }}</div>
+
+    <div class="muted">
+      Dopo il login il token viene salvato nel browser. <a class="link" href="./index.html">Vai alla mappa posti</a>
+    </div>
+
+    <div class="small">
+      Server login URL: <code>{{ loginUrl }}</code>
+    </div>
+  </div>
+
+  <script>
+    const { createApp } = Vue;
+
+    createApp({
+      data() {
+        return {
+          email: '',
+          password: '',
+          loading: false,
+          error: '',
+          // ADATTA QUI se il tuo endpoint è /auth/login o simile
+          loginUrl: '/login'
+        };
+      },
+      methods: {
+        async login() {
+          this.error = '';
+          if (!this.email || !this.password) {
+            this.error = 'Compila email e password';
+            return;
+          }
+          this.loading = true;
+          try {
+            const res = await fetch(this.loginUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: this.email, password: this.password })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+              this.error = data.message || data.error || 'Errore autenticazione';
+              this.loading = false;
+              return;
+            }
+            // compatibilità: flask-jwt-extended può restituire "access_token"
+            const token = data.access_token || data.token || data.access || data.jwt;
+            if (!token) {
+              this.error = 'Token non trovato nella risposta del server';
+              this.loading = false;
+              return;
+            }
+            localStorage.setItem('iot_jwt', token);
+            // opzionale: salva anche info utente se il server le restituisce
+            if (data.user) localStorage.setItem('iot_user', JSON.stringify(data.user));
+            // redirect alla pagina principale della UI
+            window.location.href = './index.html';
+          } catch (err) {
+            console.error(err);
+            this.error = 'Errore di rete o server';
+          } finally {
+            this.loading = false;
+          }
+        }
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>

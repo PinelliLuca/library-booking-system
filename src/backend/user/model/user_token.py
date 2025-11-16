@@ -1,4 +1,4 @@
-from src.main import db
+from src.extensions import db
 class UserToken(db.Model):
     __tablename__ = "user_token"
 
