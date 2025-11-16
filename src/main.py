@@ -1,12 +1,10 @@
 from flask import Flask
 from flask_smorest import Api
-from src.backend.common.db import db
+from src.backend.common.extensions import db, jwt, mail
 from dotenv import load_dotenv
 from werkzeug.utils import send_from_directory
-from flask_jwt_extended import JWTManager
 from datetime import timedelta
 from src.backend.auth.login import login_bp
-from flask_mail import Mail
 import os
 from src.backend.seat.service import seats_bp
 from flask import jsonify
@@ -40,8 +38,8 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 # Inizializza estensioni
 db.init_app(app)
 api = Api(app)
-jwt = JWTManager(app)
-mail=Mail(app)
+jwt.init_app(app)
+mail.init_app(app)
 # Gestione delle eccezioni HTTP
 @app.errorhandler(HTTPException)
 def handle_http_exception(e):

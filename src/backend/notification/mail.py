@@ -1,6 +1,6 @@
 from flask import g, current_app
 from flask_mail import Message
-from src.main import mail
+from src.backend.common.extensions import mail
 from src.backend.user.model.user import User
 
 def send_email(subject, body, recipients=None):

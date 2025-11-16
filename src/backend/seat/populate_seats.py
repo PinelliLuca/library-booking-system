@@ -1,5 +1,6 @@
 from src.backend.seat.models import Seat
-from src.main import app, db
+from src.main import app
+from src.backend.common.extensions import db
 
 with app.app_context():
     for row in range(5):

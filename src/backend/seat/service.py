@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from src.main import db
+from src.backend.common.extensions import db
 from src.backend.seat.models import Seat
 from src.backend.notification.mail import send_email
 

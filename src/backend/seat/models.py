@@ -1,5 +1,4 @@
-from src.main import db
-
+from src.backend.common.extensions import db
 class Seat(db.Model):
     __tablename__ = "seats"
 
