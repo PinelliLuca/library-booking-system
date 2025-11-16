@@ -9,7 +9,7 @@ import os
 from src.backend.seat.service import seats_bp
 from flask import jsonify
 from werkzeug.exceptions import HTTPException
-
+from src.backend.user.controller import user_bp
 # Carica variabili da .env
 load_dotenv()
 
@@ -31,6 +31,8 @@ app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@example.com')
 
 app.register_blueprint(login_bp)
+app.register_blueprint(user_bp)
+app.register_blueprint(seats_bp)
 # Configurazione SQLite
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///../instance/iot.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -78,8 +80,6 @@ def missing_token_callback(error):
     """
     return jsonify({"message": "Token mancante", "error": "authorization_required"}), 401
 
-
-app.register_blueprint(seats_bp)
 @app.route("/frontend")
 def serve_frontend():
     return send_from_directory("../frontend", "index.html")
