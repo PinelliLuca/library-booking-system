@@ -3,7 +3,7 @@ from werkzeug.security import check_password_hash
 from src.backend.user.model.user import User
 from src.backend.auth.token_generator import generate_token
 
-login_bp = Blueprint('login', __name__, url_prefix='/auth')
+login_bp = Blueprint('login', __name__)
 
 @login_bp.route('/login', methods=['POST'])
 def login():

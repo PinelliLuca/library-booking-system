@@ -8,7 +8,7 @@ from src.backend.user.model.user_token import UserToken
 from src.backend.auth.token_generator import generate_token
 
 # Creazione del Blueprint
-user_bp = Blueprint('user', __name__, url_prefix='/user')
+user_bp = Blueprint('user', __name__)
 
 @user_bp.route('/register', methods=['POST'])
 def register_user():
