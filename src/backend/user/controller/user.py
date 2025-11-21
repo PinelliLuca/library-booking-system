@@ -6,7 +6,7 @@ from src.backend.common.extensions import db
 from src.backend.user.model.user import User
 from src.backend.user.model.user_token import UserToken
 from src.backend.auth.token_generator import generate_token
-
+from src.backend.common.logger import logging
 # Creazione del Blueprint
 user_bp = Blueprint('user', __name__)
 
@@ -28,13 +28,16 @@ def register_user():
 
         # Controlla che tutti i campi siano presenti
         if not all([username, password, first_name, last_name, mail]):
+            logging.error("Campi mancanti durante la registrazione dell'utente.")
             return jsonify({"error": "Tutti i campi sono obbligatori"}), 400
 
         # Controlla se l'utente esiste già
         if User.query.filter_by(username=username).first():
+            logging.error("Username già in uso durante la registrazione dell'utente.")
             return jsonify({"error": "Username già in uso"}), 409
 
         if User.query.filter_by(mail=mail).first():
+            logging.error("Email già in uso durante la registrazione dell'utente.")
             return jsonify({"error": "Email già in uso"}), 409
 
         # Crea un nuovo utente
@@ -62,7 +65,7 @@ def register_user():
         )
         db.session.add(user_token)
         db.session.commit()
-
+        logging.info(f"Nuovo utente registrato: {username} - mail {mail}")
         return jsonify({
             "message": "Utente registrato con successo",
             "user": {
@@ -77,7 +80,9 @@ def register_user():
 
     except SQLAlchemyError as e:
         db.session.rollback()  # Annulla eventuali modifiche non salvate
+        logging.error(f"Errore del database durante la registrazione dell'utente: {str(e)}")
         return jsonify({"error": "Errore del database", "details": str(e)}), 500
 
     except Exception as e:
+        logging.error(f"Errore interno del server durante la registrazione dell'utente: {str(e)}")
         return jsonify({"error": "Errore interno del server", "details": str(e)}), 500

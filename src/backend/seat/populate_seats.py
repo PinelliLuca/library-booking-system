@@ -1,6 +1,7 @@
 from src.backend.seat.models import Seat
 from src.main import app
 from src.backend.common.extensions import db
+from src.backend.common.logger import logging
 
 with app.app_context():
     for row in range(5):
@@ -8,4 +9,4 @@ with app.app_context():
             seat = Seat(row=row, column=column, is_occupied=False)
             db.session.add(seat)
     db.session.commit()
-    print("Matrice 5x5 di posti creata.")
+    logging.info("Matrice 5x5 di posti creata.")

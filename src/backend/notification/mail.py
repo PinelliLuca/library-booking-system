@@ -2,6 +2,7 @@ from flask import g, current_app
 from flask_mail import Message
 from src.backend.common.extensions import mail
 from src.backend.user.model.user import User
+from src.backend.common.logger import logging
 
 def send_email(subject, body, recipients=None):
     """
@@ -28,6 +29,9 @@ def send_email(subject, body, recipients=None):
         body=body,
         sender=current_app.config.get("MAIL_DEFAULT_SENDER")
     )
-
+    try:
     # Invia l'email
-    mail.send(msg)
+        mail.send(msg)
+    except Exception as e:
+        logging.error(f"Errore durante l'invio dell'email: {str(e)}")
+        raise
