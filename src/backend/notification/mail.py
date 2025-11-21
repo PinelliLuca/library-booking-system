@@ -32,6 +32,7 @@ def send_email(subject, body, recipients=None):
     try:
     # Invia l'email
         mail.send(msg)
+        logging.info(f"Email inviata a {recipients} con oggetto '{subject}'")
     except Exception as e:
         logging.error(f"Errore durante l'invio dell'email: {str(e)}")
         raise

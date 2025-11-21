@@ -6,10 +6,10 @@ from werkzeug.utils import send_from_directory
 from datetime import timedelta
 from src.backend.auth.login import login_bp
 import os
-from src.backend.seat.service import seats_bp
+from src.backend.seat.controller.seat import seats_bp
 from flask import jsonify
 from werkzeug.exceptions import HTTPException
-from src.backend.user.controller import user_bp
+from src.backend.user.controller.user import user_bp
 # Carica variabili da .env
 load_dotenv()
 
