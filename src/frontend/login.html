@@ -34,6 +34,11 @@
       <span v-else>Caricamento…</span>
     </button>
 
+    <button @click="register" :disabled="loading">
+      <span v-if="!loading">Registrati</span>
+      <span v-else>Caricamento…</span>
+    </button>
+
     <div class="error" v-if="error">{{ error }}</div>
 
     <div class="muted">
@@ -97,6 +102,10 @@
           } finally {
             this.loading = false;
           }
+        },
+        // apre la pagina di registrazione
+        register() {
+          window.location.href = './register';
         }
       }
     }).mount('#app');

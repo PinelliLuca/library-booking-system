@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <title>Registrazione - IoT Seats</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <style>
+    body { font-family: Inter, system-ui, sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; margin:0; background:#f4f6fb; }
+    .card { width:420px; padding:20px; background:#fff; border-radius:8px; box-shadow:0 6px 18px rgba(20,40,60,0.08); }
+    h2 { margin:0 0 14px 0; font-size:18px; }
+    label { display:block; margin-top:8px; font-size:13px; color:#333; }
+    input { width:100%; padding:10px; margin-top:6px; border:1px solid #ddd; border-radius:6px; box-sizing:border-box; }
+    button { margin-top:12px; width:100%; padding:10px; background:#0b5ed7; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600; }
+    .secondary { background:#fff; color:#333; border:1px solid #ddd; }
+    .muted { font-size:13px; color:#666; margin-top:10px; text-align:center; }
+    .error { color:#b00020; margin-top:8px; font-size:13px; }
+  </style>
+</head>
+<body>
+  <div id="app" class="card">
+    <h2>Registrazione - IoT Seats</h2>
+
+    <label>Username
+      <input v-model="username" type="text" autocomplete="username" />
+    </label>
+
+    <label>Nome
+      <input v-model="first_name" type="text" />
+    </label>
+
+    <label>Cognome
+      <input v-model="last_name" type="text" />
+    </label>
+
+    <label>Email
+      <input v-model="mail" type="email" autocomplete="email" />
+    </label>
+
+    <label>Password
+      <input v-model="password" type="password" autocomplete="new-password" />
+    </label>
+
+    <div class="error" v-if="error">{{ error }}</div>
+
+    <button @click="register" :disabled="loading">
+      <span v-if="!loading">Registra</span>
+      <span v-else>Registrazione…</span>
+    </button>
+
+    <button class="secondary" @click="goLogin" :disabled="loading" style="margin-top:8px;">
+      Torna al Login
+    </button>
+
+    <div class="muted">
+      Dopo la registrazione verrai riportato alla pagina di login.
+    </div>
+  </div>
+
+  <script>
+    const { createApp } = Vue;
+    createApp({
+      data() {
+        return {
+          username: '',
+          first_name: '',
+          last_name: '',
+          mail: '',
+          password: '',
+          loading: false,
+          error: ''
+        };
+      },
+      methods: {
+        goLogin() {
+          window.location.href = './login.html';
+        },
+        async register() {
+          this.error = '';
+          if (!this.username || !this.first_name || !this.last_name || !this.mail || !this.password) {
+            this.error = 'Compila tutti i campi';
+            return;
+          }
+          this.loading = true;
+          try {
+            const res = await fetch('/register', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                username: this.username,
+                password: this.password,
+                first_name: this.first_name,
+                last_name: this.last_name,
+                mail: this.mail
+              })
+            });
+            const data = await res.json().catch(()=>({}));
+            if (!res.ok) {
+              this.error = data.error || data.message || 'Errore durante la registrazione';
+              return;
+            }
+            // registrazione ok -> redirect al login
+            alert('Registrazione avvenuta con successo. Effettua il login.');
+            window.location.href = './login.html';
+          } catch (err) {
+            console.error(err);
+            this.error = 'Errore di rete o server';
+          } finally {
+            this.loading = false;
+          }
+        }
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>

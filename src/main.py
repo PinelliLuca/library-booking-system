@@ -79,9 +79,17 @@ def missing_token_callback(error):
     """
     return jsonify({"message": "Token mancante", "error": "authorization_required"}), 401
 
-@app.route("/frontend")
-def serve_frontend():
+@app.route("/frontend/mappa")
+def serve_frontend_mappa():
     return send_from_directory("frontend", "index.html")
+
+@app.route("/frontend/login")
+def serve_frontend_login():
+    return send_from_directory("frontend", "login.html")
+
+@app.route("/frontend/register")
+def serve_frontend_register():
+    return send_from_directory("frontend", "register.html")
 # Crea le tabelle se non esistono
 with app.app_context():
     db.create_all()

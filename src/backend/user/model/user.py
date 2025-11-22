@@ -7,6 +7,6 @@ class User(db.Model):
     password = db.Column(db.String, nullable=False)
     first_name = db.Column(db.String, nullable=False)
     last_name = db.Column(db.String, nullable=False)
-    token = db.Column(db.String, nullable=False)
+    # token = db.Column(db.String, nullable=False)
     mail = db.Column(db.String, unique=True, nullable=False)
     ins_istance=db.Column(db.DateTime, default=db.func.current_timestamp())
