@@ -8,4 +8,4 @@ class Seat(db.Model):
     upd_datetime=db.Column(db.DateTime, nullable=False)
 
     def __repr__(self):
-        return f"<Seat ID {self.id} ({self.row}, {self.column}) - {'Occupied' if self.is_occupied else 'Free'}>"
+        return f"<Seat ID {self.id} - {'Occupied' if self.is_occupied else 'Free'}>"

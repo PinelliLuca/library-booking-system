@@ -2,19 +2,18 @@ from flask import Flask
 from flask_smorest import Api
 from src.backend.common.extensions import db, jwt, mail
 from dotenv import load_dotenv
-from werkzeug.utils import send_from_directory
 from datetime import timedelta
 from src.backend.auth.login import login_bp
 import os
 from src.backend.seat.controller.seat import seats_bp
-from flask import jsonify
+from flask import jsonify, send_from_directory
 from werkzeug.exceptions import HTTPException
 from src.backend.user.controller.user import user_bp
 # Carica variabili da .env
 load_dotenv()
 
 # Inizializza Flask
-app = Flask(__name__)
+app = Flask(__name__, instance_relative_config=True)
 app.config["API_TITLE"] = "IoT Parking API"
 app.config["API_VERSION"] = "v1"
 app.config["OPENAPI_VERSION"] = "3.0.3"
@@ -34,7 +33,7 @@ app.register_blueprint(login_bp)
 app.register_blueprint(user_bp)
 app.register_blueprint(seats_bp)
 # Configurazione SQLite
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///../instance/iot.db"
+app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'instance')), 'iot.db')}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # Inizializza estensioni
@@ -82,7 +81,7 @@ def missing_token_callback(error):
 
 @app.route("/frontend")
 def serve_frontend():
-    return send_from_directory("../frontend", "index.html")
+    return send_from_directory("frontend", "index.html")
 # Crea le tabelle se non esistono
 with app.app_context():
     db.create_all()
