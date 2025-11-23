@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from src.backend.common.extensions import db
 from src.backend.seat.models import Seat
 from src.backend.notification.mail import send_email
+from src.backend.auth.auth import auth_required
 from sqlalchemy.exc import SQLAlchemyError
 
 seats_bp = Blueprint("seats", __name__, url_prefix="/seats")
@@ -38,6 +39,7 @@ def get_single_seat(row, column):
 
 # PATCH: modifica lo stato di occupazione
 @seats_bp.route("/<int:seat_id>", methods=["PATCH"])
+@auth_required
 def update_seat_status(seat_id):
     try:
         seat = Seat.query.get(seat_id)

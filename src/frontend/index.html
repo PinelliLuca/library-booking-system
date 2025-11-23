@@ -17,6 +17,7 @@
     .history-list { max-height:200px; overflow:auto; margin-top:8px; }
     button { padding:6px 10px; border-radius:6px; border:1px solid #ccc; background:#fff; cursor:pointer; }
     button.primary { background:#0b5ed7; color:#fff; border-color:#095cb0; }
+    button.error { background:#ff0707; color:#fff; border-color:#ff0707; }
   </style>
 </head>
 <body>
@@ -31,6 +32,10 @@
       <button @click="toggleDashboard">{{ showDashboard ? 'Nascondi' : 'Mostra' }} dashboard</button>
       <div style="margin-left:auto;">
         <strong>Occupati:</strong> {{ stats.occupied }} / {{ stats.total }} ({{ stats.occupancyPercent }}%)
+      </div>
+      <!-- logout button top-right -->
+      <div style="right:20px;top:20px;">
+        <button class="error" @click="logout" title="Logout">Logout</button>
       </div>
     </div>
 
@@ -220,10 +225,116 @@
         },
         toggleDashboard() {
           this.showDashboard = !this.showDashboard;
+        },
+
+        // Token helpers
+        getToken() {
+          return localStorage.getItem('iot_jwt');
+        },
+        setToken(token) {
+          if (token) localStorage.setItem('iot_jwt', token);
+        },
+        removeToken() {
+          localStorage.removeItem('iot_jwt');
+        },
+
+        // logout client-side: cancella token e torna al login
+        logout() {
+          this.removeToken();
+          window.location.href = './login';
+        },
+
+        // wrapper fetch che aggiunge Authorization header e gestisce 401/422
+        async authFetch(url, opts = {}) {
+          const token = this.getToken();
+          if (!token) {
+            this.logout();
+            throw new Error('Token mancante');
+          }
+
+          opts.headers = Object.assign({}, opts.headers || {});
+          // assicurati di preservare Content-Type se già presente
+          opts.headers['Authorization'] = `Bearer ${token}`;
+
+          // se vuoi inviare cookie: opts.credentials = 'include';
+
+          const res = await fetch(url, opts);
+
+          // gestisci token mancante/invalid/scaduto
+          if (res.status === 401 || res.status === 422) {
+            // pulisci token e rimanda al login
+            this.removeToken();
+            window.location.href = './login';
+            throw new Error('Token non valido o scaduto');
+          }
+
+          return res;
+        },
+
+        // esempio: uso authFetch per ottenere la lista dei posti
+        async fetchSeats() {
+          try {
+            const res = await this.authFetch('/seats', { method: 'GET' });
+            if (!res.ok) {
+              const err = await res.json().catch(()=>({}));
+              console.error('fetchSeats error', err);
+              return;
+            }
+            const seats = await res.json();
+            this.seats = seats;
+          } catch (err) {
+            console.error('fetchSeats failed', err);
+          }
+        },
+
+        // esempio: richiesta PATCH per prenotare/rilasciare un posto
+        async updateSeat(patchUrl, body) {
+          try {
+            const res = await this.authFetch(patchUrl, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body)
+            });
+            if (!res.ok) {
+              const err = await res.json().catch(()=>({}));
+              throw new Error(err.error || err.message || 'Errore server');
+            }
+            return await res.json();
+          } catch (err) {
+            console.error('updateSeat failed', err);
+            throw err;
+          }
+        },
+
+        // esempio di utilizzo: onSeatClick ora usa updateSeat
+        async onSeatClick(seat) {
+          const booking = !seat.is_occupied;
+          if (!confirm(`${booking ? 'Prenotare' : 'Rilasciare'} il posto ${seat.id || (seat.row + ',' + seat.column)}?`)) return;
+
+          let patchUrl = seat.id ? `/seats/${seat.id}` : `/seats/${seat.row}/${seat.column}`;
+
+          try {
+            await this.updateSeat(patchUrl, { is_occupied: booking, booking: booking });
+            await this.fetchSeats();
+            this.pushHistory({ ts: Date.now(), row: seat.row, column: seat.column, id: seat.id, action: booking ? 'prenotato' : 'rilasciato' });
+            alert(booking ? 'Prenotazione eseguita con successo.' : 'Rilascio eseguito con successo.');
+          } catch (err) {
+            alert(err.message || 'Errore operazione');
+          }
+        }
+      },
+      created() {
+        // controlla presenza token e reindirizza al login se assente
+        const token = this.getToken();
+        if (!token) {
+          window.location.href = './login';
+        } else {
+          // carica risorse iniziali protette
+          this.fetchSeats();
         }
       },
       mounted() {
-        this.fetchSeats();
+        // this.fetchSeats();
         this.startPolling();
       },
       watch: {
