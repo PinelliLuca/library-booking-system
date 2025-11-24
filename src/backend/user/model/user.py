@@ -10,3 +10,5 @@ class User(db.Model):
     # token = db.Column(db.String, nullable=False)
     mail = db.Column(db.String, unique=True, nullable=False)
     ins_istance=db.Column(db.DateTime, default=db.func.current_timestamp())
+
+    bookings = db.relationship('Booking', back_populates='user', lazy=True)

@@ -4,51 +4,37 @@
   <meta charset="UTF-8" />
   <title>IoT Seats - Aula</title>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <style>
     body { font-family: sans-serif; padding: 20px; }
     .controls { display:flex; gap:10px; align-items:center; margin-bottom:12px; }
     .row-container { background-color: #f5f5f5; padding: 10px; margin-bottom: 8px; border-radius: 8px; display:flex; gap:10px; justify-content:center; }
-    /* tavoli circolari: ogni "row" diventa un tavolo con 5 sedie attorno */
     .tables-area { display:flex; flex-wrap:wrap; gap:24px; justify-content:center; align-items:center; margin-top:18px; padding:8px 0; }
     .table-circle { width:160px; height:160px; position:relative; display:inline-block; }
     .table-surface { width:86px; height:86px; border-radius:50%; background:#caa774; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); box-shadow:0 3px 8px rgba(0,0,0,0.08); }
-    .seats-wrapper { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; } /* wrapper per posizionare le sedie */
-    .seats-wrapper .seat { position:absolute; pointer-events:auto; } /* la singola sedia è cliccabile */
+    .seats-wrapper { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; }
+    .seats-wrapper .seat { position:absolute; pointer-events:auto; }
     .seats-wrapper .seat:hover { transform: translateY(-3px) scale(1.06); box-shadow: 0 6px 14px rgba(0,0,0,0.14); }
-    /* posizioni per 5 sedie attorno al tavolo (top, top-right, bottom-right, bottom-left, top-left) */
     .seats-wrapper .seat:nth-child(1){ left:50%; top:6%; transform:translate(-50%, -50%); }
     .seats-wrapper .seat:nth-child(2){ left:86%; top:26%; transform:translate(-50%,-50%); }
     .seats-wrapper .seat:nth-child(3){ left:86%; top:74%; transform:translate(-50%,-50%); }
     .seats-wrapper .seat:nth-child(4){ left:14%; top:74%; transform:translate(-50%,-50%); }
     .seats-wrapper .seat:nth-child(5){ left:14%; top:26%; transform:translate(-50%,-50%); }
-    /* adattamento mobile */
     @media (max-width:720px){ .table-circle{ width:140px;height:140px } .table-surface{ width:76px;height:76px } .seats-wrapper .seat{ width:30px;height:30px;font-size:11px } }
-    .seat { 
-      width: 34px; 
-      height: 34px; 
-      border-radius: 50%;              /* rende il div tondo */
-      display:flex; 
-      align-items:center; 
-      justify-content:center; 
-      cursor:pointer; 
-      user-select:none; 
-      color:white; 
-      font-weight:700; 
-      box-shadow: 0 3px 8px rgba(0,0,0,0.12); 
-      transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
-      font-size: 12px;
-    }
+    .seat { width: 34px; height: 34px; border-radius: 50%; display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none; color:white; font-weight:700; box-shadow: 0 3px 8px rgba(0,0,0,0.12); transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease; font-size: 12px; }
     .seat.free { background: linear-gradient(180deg,#28a745,#1f7a35); }
     .seat.occupied { background: linear-gradient(180deg,#dc3545,#9b2a2a); }
+    .seat.pending { background: linear-gradient(180deg, #ffc107, #d39e00); }
+    .seat.confirmed { background: linear-gradient(180deg, #0dcaf0, #0aa3c2); }
     .seat:hover { transform: translateY(-3px) scale(1.06); box-shadow: 0 6px 14px rgba(0,0,0,0.14); }
     .seat[title="Placeholder (manca nel DB)"] { opacity: 0.5; cursor:default; pointer-events:none; }
     .legend { display:flex; gap:12px; align-items:center; margin-top:8px; }
     .small-box { width:16px; height:16px; border-radius:3px; display:inline-block; margin-right:6px; vertical-align:middle; }
     .dashboard { margin-top:18px; background:#fff; padding:12px; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,0.06); }
-    .history-list { max-height:200px; overflow:auto; margin-top:8px; }
     button { padding:6px 10px; border-radius:6px; border:1px solid #ccc; background:#fff; cursor:pointer; }
     button.primary { background:#0b5ed7; color:#fff; border-color:#095cb0; }
     button.error { background:#ff0707; color:#fff; border-color:#ff0707; }
+    #qr-reader { width: 500px; }
   </style>
 </head>
 <body>
@@ -60,15 +46,21 @@
         <input type="number" v-model.number="pollIntervalSec" style="width:70px; margin-left:6px;" min="5" /> sec
       </label>
       <button @click="fetchSeats" class="primary">Aggiorna ora</button>
-      <button @click="toggleDashboard">{{ showDashboard ? 'Nascondi' : 'Mostra' }} dashboard</button>
       <div style="margin-left:auto;">
         <strong>Occupati:</strong> {{ stats.occupied }} / {{ stats.total }} ({{ stats.occupancyPercent }}%)
       </div>
-      <!-- logout button top-right -->
       <div style="right:20px;top:20px;">
         <button class="error" @click="logout" title="Logout">Logout</button>
       </div>
     </div>
+    
+    <div v-if="pendingBooking" class="dashboard">
+        <h3>Hai una prenotazione in attesa!</h3>
+        <p>Posto #{{ pendingBooking.seat_id }} - Scansiona il QR code per confermare.</p>
+        <button @click="startScanner" class="primary">Fai Check-in con QR Code</button>
+        <div v-if="showScanner" id="qr-reader" style="margin-top: 10px;"></div>
+    </div>
+
 
     <div v-if="gridRows.length === 0">Caricamento posti…</div>
 
@@ -80,7 +72,7 @@
             v-for="(seat, sIdx) in row"
             :key="seatKey(seat, rIdx*5 + sIdx)"
             class="seat"
-            :class="seat.is_occupied ? 'occupied' : 'free'"
+            :class="seatClass(seat)"
             @click="onSeatClick(seat)"
             :title="seatTitle(seat)"
           >
@@ -92,37 +84,9 @@
 
     <div class="legend">
       <div><span class="small-box" style="background:#28a745"></span> Libero</div>
-      <div><span class="small-box" style="background:#dc3545"></span> Occupato</div>
-      <div style="margin-left:12px;color:#666">Clicca su un posto libero per prenotarlo</div>
-    </div>
-
-    <div v-if="showDashboard" class="dashboard">
-      <h3>Dashboard e Storico</h3>
-      <div>
-        <strong>Totale posti:</strong> {{ stats.total }} |
-        <strong>Occupati:</strong> {{ stats.occupied }} |
-        <strong>Libero:</strong> {{ stats.free }}
-      </div>
-
-      <div style="margin-top:8px;">
-        <label>Filtro storico: 
-          <select v-model="historyFilter">
-            <option value="all">Tutti</option>
-            <option value="reserve">Prenotazioni</option>
-            <option value="release">Rilasci</option>
-          </select>
-        </label>
-        <button @click="clearHistory" style="margin-left:8px">Svuota storico locale</button>
-      </div>
-
-      <div class="history-list">
-        <ul>
-          <li v-for="item in filteredHistory" :key="item.ts">
-            [{{ new Date(item.ts).toLocaleString() }}] - Posto {{ item.id }} - {{ item.action }}
-          </li>
-          <li v-if="filteredHistory.length === 0" style="color:#666">Nessuna voce</li>
-        </ul>
-      </div>
+      <div><span class="small-box" style="background:#dc3545"></span> Occupato (Sensore)</div>
+      <div><span class="small-box" style="background:#ffc107"></span> Prenotato (In attesa di check-in)</div>
+       <div><span class="small-box" style="background:#0dcaf0"></span> Check-in confermato</div>
     </div>
   </div>
 
@@ -135,13 +99,12 @@
           seats: [],
           pollIntervalSec: 30,
           pollTimer: null,
-          showDashboard: false,
-          historyKey: 'reservationHistory',
-          historyFilter: 'all',
+          userBookings: [],
+          showScanner: false,
+          html5QrcodeScanner: null
         };
       },
       computed: {
-        // costruisce matrice di righe usando row/column se presenti, altrimenti raggruppa per slot ogni 5
         gridRows() {
           if (!this.seats || this.seats.length === 0) return [];
           const perRow = 5;
@@ -156,14 +119,8 @@
           const occupancyPercent = total ? Math.round((occupied / total) * 100) : 0;
           return { total, occupied, free, occupancyPercent };
         },
-        history() {
-          try {
-            return JSON.parse(localStorage.getItem(this.historyKey) || '[]');
-          } catch(e) { return []; }
-        },
-        filteredHistory() {
-          if (this.historyFilter === 'all') return this.history.slice().reverse();
-          return this.history.filter(h => (this.historyFilter === 'reserve' ? h.action === 'prenotato' : h.action === 'rilasciato')).reverse();
+        pendingBooking() {
+            return this.userBookings.find(b => b.status === 'pending_checkin');
         }
       },
       methods: {
@@ -175,63 +132,105 @@
           if (seat.id !== undefined) return `#${seat.id}`;
           return '?';
         },
+        seatClass(seat) {
+            if (seat.is_occupied) return 'occupied';
+            if (seat.booking_status === 'pending_checkin') return 'pending';
+            if (seat.booking_status === 'confirmed') return 'confirmed';
+            return 'free';
+        },
         seatTitle(seat) {
-          if (seat.missing) return 'Placeholder (manca nel DB)';
-          return seat.is_occupied ? 'Occupato' : 'Libero';
+          if (seat.is_occupied) return 'Occupato (sensore)';
+          if (seat.booking_status === 'pending_checkin') return 'Prenotato - In attesa di check-in';
+          if (seat.booking_status === 'confirmed') return 'Prenotazione confermata';
+          return 'Libero';
         },
-        async fetchSeats() {
-          try {
-            const res = await fetch('/seats');
-            if (!res.ok) throw new Error('Errore fetch seats');
-            const data = await res.json();
-            this.seats = data;
-          } catch (err) {
-            console.error('fetchSeats error', err);
-          }
-        },
+        
         async onSeatClick(seat) {
-          const booking = !seat.is_occupied;
-          const actionLabel = booking ? 'Prenotare' : 'Rilasciare';
-          const doReserve = confirm(`${actionLabel} il posto ${this.seatLabel(seat)}?`);
-          if (!doReserve) return;
-
-          // costruisci endpoint di update: preferisci id se presente, altrimenti row/column
-          let patchUrl = null;
-          if (seat.id !== undefined) patchUrl = `/seats/${seat.id}`;
-          else {
-            alert('Impossibile identificare il posto per la prenotazione.');
-            return;
-          }
-
-          try {
-            const res = await fetch(patchUrl, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ is_occupied: true, booking: booking })
-            });
-            if (!res.ok) {
-              const err = await res.json().catch(()=>({})); 
-              throw new Error(err.error || 'Errore nella prenotazione');
+            if (seat.is_occupied) {
+                alert("Questo posto è occupato (rilevato dal sensore).");
+                return;
             }
-            // aggiorna view e storico locale
-            await this.fetchSeats();
-            this.pushHistory({ ts: Date.now(), id: seat.id, action: booking ? 'prenotato' : 'rilasciato' });
-            alert(booking ? 'Prenotazione eseguita con successo.' : 'Rilascio eseguito con successo.');
-          } catch (err) {
-            console.error('reserve error', err);
-            alert('Errore durante la prenotazione. Controlla il server.');
-          }
+            if (seat.booking_status) {
+                alert("Questo posto è già prenotato.");
+                return;
+            }
+            if (this.pendingBooking) {
+                alert("Hai già una prenotazione in attesa. Completa prima il check-in.");
+                return;
+            }
+
+            if (!confirm(`Vuoi prenotare il posto #${seat.id}?`)) return;
+
+            try {
+                const response = await this.authFetch('/bookings/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ seat_id: seat.id })
+                });
+                if (!response.ok) {
+                    const err = await response.json().catch(()=>({}));
+                    throw new Error(err.message || 'Errore nella creazione della prenotazione');
+                }
+                alert('Prenotazione creata. Ora effettua il check-in scansionando il QR code sul posto.');
+                await this.fetchUserBookings();
+                await this.fetchSeats();
+            } catch (err) {
+                console.error('Booking error', err);
+                alert(err.message || 'Errore durante la creazione della prenotazione.');
+            }
         },
-        pushHistory(entry) {
-          const h = this.history;
-          h.push(entry);
-          localStorage.setItem(this.historyKey, JSON.stringify(h));
+
+        async fetchUserBookings() {
+            try {
+                const res = await this.authFetch('/bookings/');
+                if (!res.ok) throw new Error('Errore nel caricamento delle prenotazioni');
+                this.userBookings = await res.json();
+            } catch (err) {
+                console.error("fetchUserBookings error", err);
+            }
         },
-        clearHistory() {
-          if (!confirm('Svuotare lo storico locale?')) return;
-          localStorage.removeItem(this.historyKey);
-          alert('Storico cancellato (locale).');
+
+        startScanner() {
+            this.showScanner = !this.showScanner;
+            if (this.showScanner) {
+              this.$nextTick(() => {
+                  this.html5QrcodeScanner = new Html5Qrcode("qr-reader");
+                  const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+                  this.html5QrcodeScanner.start({ facingMode: "environment" }, config, this.onScanSuccess);
+              });
+            }
         },
+
+        onScanSuccess(decodedText, decodedResult) {
+            if (this.html5QrcodeScanner) {
+                this.html5QrcodeScanner.stop().then(() => {
+                    this.showScanner = false;
+                    this.html5QrcodeScanner = null;
+                    this.performCheckIn(decodedText);
+                }).catch(err => console.error("Error stopping scanner", err));
+            }
+        },
+
+        async performCheckIn(seatIdentifier) {
+            try {
+                const response = await this.authFetch('/bookings/check-in', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ seat_identifier: seatIdentifier })
+                });
+                 if (!response.ok) {
+                    const err = await response.json().catch(()=>({}));
+                    throw new Error(err.message || 'Errore durante il check-in');
+                }
+                alert('Check-in effettuato con successo!');
+                await this.fetchUserBookings();
+                await this.fetchSeats();
+            } catch (err) {
+                console.error('Check-in error', err);
+                alert(err.message || 'Errore durante il check-in.');
+            }
+        },
+        
         startPolling() {
           if (this.pollTimer) clearInterval(this.pollTimer);
           this.pollTimer = setInterval(() => this.fetchSeats(), Math.max(5, this.pollIntervalSec) * 1000);
@@ -240,28 +239,15 @@
           if (this.pollTimer) clearInterval(this.pollTimer);
           this.pollTimer = null;
         },
-        toggleDashboard() {
-          this.showDashboard = !this.showDashboard;
-        },
+        
+        getToken() { return localStorage.getItem('iot_jwt'); },
+        removeToken() { localStorage.removeItem('iot_jwt'); },
 
-        // Token helpers
-        getToken() {
-          return localStorage.getItem('iot_jwt');
-        },
-        setToken(token) {
-          if (token) localStorage.setItem('iot_jwt', token);
-        },
-        removeToken() {
-          localStorage.removeItem('iot_jwt');
-        },
-
-        // logout client-side: cancella token e torna al login
         logout() {
           this.removeToken();
           window.location.href = './login';
         },
 
-        // wrapper fetch che aggiunge Authorization header e gestisce 401/422
         async authFetch(url, opts = {}) {
           const token = this.getToken();
           if (!token) {
@@ -270,16 +256,11 @@
           }
 
           opts.headers = Object.assign({}, opts.headers || {});
-          // assicurati di preservare Content-Type se già presente
           opts.headers['Authorization'] = `Bearer ${token}`;
-
-          // se vuoi inviare cookie: opts.credentials = 'include';
 
           const res = await fetch(url, opts);
 
-          // gestisci token mancante/invalid/scaduto
           if (res.status === 401 || res.status === 422) {
-            // pulisci token e rimanda al login
             this.removeToken();
             window.location.href = './login';
             throw new Error('Token non valido o scaduto');
@@ -288,70 +269,30 @@
           return res;
         },
 
-        // esempio: uso authFetch per ottenere la lista dei posti
         async fetchSeats() {
           try {
-            const res = await this.authFetch('/seats', { method: 'GET' });
+            const res = await this.authFetch('/seats');
             if (!res.ok) {
               const err = await res.json().catch(()=>({}));
               console.error('fetchSeats error', err);
               return;
             }
-            const seats = await res.json();
-            this.seats = seats;
+            this.seats = await res.json();
           } catch (err) {
             console.error('fetchSeats failed', err);
           }
         },
-
-        // esempio: richiesta PATCH per prenotare/rilasciare un posto
-        async updateSeat(patchUrl, body) {
-          try {
-            const res = await this.authFetch(patchUrl, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(body)
-            });
-            if (!res.ok) {
-              const err = await res.json().catch(()=>({}));
-              throw new Error(err.error || err.message || 'Errore server');
-            }
-            return await res.json();
-          } catch (err) {
-            console.error('updateSeat failed', err);
-            throw err;
-          }
-        },
-
-        // esempio di utilizzo: onSeatClick ora usa updateSeat
-        async onSeatClick(seat) {
-          const booking = !seat.is_occupied;
-          if (!confirm(`${booking ? 'Prenotare' : 'Rilasciare'} il posto ${seat.id}?`)) return;
-
-          let patchUrl = `/seats/${seat.id}`;
-
-          try {
-            await this.updateSeat(patchUrl, { is_occupied: booking, booking: booking });
-            await this.fetchSeats();
-            this.pushHistory({ ts: Date.now(), id: seat.id, action: booking ? 'prenotato' : 'rilasciato' });
-            alert(booking ? 'Prenotazione eseguita con successo.' : 'Rilascio eseguito con successo.');
-          } catch (err) {
-            alert(err.message || 'Errore operazione');
-          }
-        }
       },
       created() {
-        // controlla presenza token e reindirizza al login se assente
         const token = this.getToken();
         if (!token) {
           window.location.href = './login';
         } else {
-          // carica risorse iniziali protette
           this.fetchSeats();
+          this.fetchUserBookings();
         }
       },
       mounted() {
-        // this.fetchSeats();
         this.startPolling();
       },
       watch: {

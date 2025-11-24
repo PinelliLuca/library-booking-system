@@ -1,22 +1,35 @@
 from flask import Blueprint, jsonify, request
 from src.backend.common.extensions import db
 from src.backend.seat.models import Seat
+from src.backend.booking.models import Booking
 from src.backend.notification.mail import send_email
 from src.backend.auth.auth import auth_required
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import and_
 
 seats_bp = Blueprint("seats", __name__, url_prefix="/seats")
 
 @seats_bp.route("/", methods=["GET"])
 def get_all_seats():
     try:
-        seats = Seat.query.all()
-        return jsonify([
-            {
+        results = db.session.query(
+            Seat, Booking.status
+        ).outerjoin(
+            Booking, and_(
+                Seat.id == Booking.seat_id,
+                Booking.status.in_(['pending_checkin', 'confirmed'])
+            )
+        ).all()
+
+        seats_data = []
+        for seat, booking_status in results:
+            seats_data.append({
                 "id": seat.id,
-                "is_occupied": seat.is_occupied
-            } for seat in seats
-        ])
+                "is_occupied": seat.is_occupied,
+                "booking_status": booking_status
+            })
+
+        return jsonify(seats_data)
     except SQLAlchemyError as e:
         return jsonify({"error": "Errore del database", "details": str(e)}), 500
     except Exception as e:
