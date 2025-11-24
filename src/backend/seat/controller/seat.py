@@ -52,8 +52,8 @@ def update_seat_status(seat_id):
         booking = data.get('booking')
         if not seat_id:
             return jsonify({"error": "Missing 'seat_id'"}), 400
-        if not booking:
-            return jsonify({"error": "specifica il booking"}), 500
+        # if not booking:
+        #     return jsonify({"error": "specifica il booking"}), 500
         seat = Seat.query.get(seat_id)
         if not seat:
             return jsonify({"error": "Seat not found"}), 404
@@ -73,12 +73,11 @@ def update_seat_status(seat_id):
                 subject="Conferma prenotazione",
                 body=f"Hai prenotato il posto {seat_id}.",
             )
-            return jsonify({
-                "id": seat.id,
-                "is_occupied": seat.is_occupied
-            })
         except Exception as e:
-            return jsonify({"error": "Errore durante l'invio dell'email", "details": str(e)}), 500
+            # return jsonify({"error": "Errore durante l'invio dell'email", "details": str(e)}), 500
+            pass
+
+        return jsonify({"id": seat.id, "is_occupied": seat.is_occupied}), 200
 
     except SQLAlchemyError as e:
         db.session.rollback()  # Annulla eventuali modifiche non salvate
