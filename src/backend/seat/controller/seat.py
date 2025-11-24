@@ -1,3 +1,4 @@
+import datetime
 from flask import Blueprint, jsonify, request
 from src.backend.common.extensions import db
 from src.backend.seat.models import Seat
@@ -12,12 +13,15 @@ seats_bp = Blueprint("seats", __name__, url_prefix="/seats")
 @seats_bp.route("/", methods=["GET"])
 def get_all_seats():
     try:
+        now = datetime.datetime.now(datetime.timezone.utc)
         results = db.session.query(
             Seat, Booking.status
         ).outerjoin(
             Booking, and_(
                 Seat.id == Booking.seat_id,
-                Booking.status.in_(['pending_checkin', 'confirmed'])
+                Booking.status.in_(['pending_checkin', 'confirmed']), 
+                Booking.start_time <= now,
+                Booking.end_time >= now
             )
         ).all()
 

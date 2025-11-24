@@ -47,7 +47,7 @@
       </label>
       <button @click="fetchSeats" class="primary">Aggiorna ora</button>
       <div style="margin-left:auto;">
-        <strong>Occupati:</strong> {{ stats.occupied }} / {{ stats.total }} ({{ stats.occupancyPercent }}%)
+        Ciao, <strong>{{ username }}</strong>
       </div>
       <div style="right:20px;top:20px;">
         <button class="error" @click="logout" title="Logout">Logout</button>
@@ -86,7 +86,10 @@
       <div><span class="small-box" style="background:#28a745"></span> Libero</div>
       <div><span class="small-box" style="background:#dc3545"></span> Occupato (Sensore)</div>
       <div><span class="small-box" style="background:#ffc107"></span> Prenotato (In attesa di check-in)</div>
-       <div><span class="small-box" style="background:#0dcaf0"></span> Check-in confermato</div>
+      <div><span class="small-box" style="background:#0dcaf0"></span> Check-in confermato</div>
+      <div style="margin-left:auto;">
+        <strong>Occupati:</strong> {{ stats.occupied }} / {{ stats.total }} ({{ stats.occupancyPercent }}%)
+      </div>
     </div>
   </div>
 
@@ -241,7 +244,7 @@
         },
         
         getToken() { return localStorage.getItem('iot_jwt'); },
-        removeToken() { localStorage.removeItem('iot_jwt'); },
+        removeToken() { localStorage.removeItem('iot_jwt'); localStorage.removeItem('iot_username'); },
 
         logout() {
           this.removeToken();
@@ -288,6 +291,7 @@
         if (!token) {
           window.location.href = './login';
         } else {
+          this.username = localStorage.getItem('iot_username') || '';
           this.fetchSeats();
           this.fetchUserBookings();
         }

@@ -15,8 +15,11 @@ class BookingList(MethodView):
     @jwt_required()
     def get(self):
         """Get all bookings for the current user"""
-        user_id = get_jwt_identity()
-        bookings = Booking.query.filter_by(user_id=user_id).all()
+        username = get_jwt_identity()
+        user = User.query.filter(User.username == username).first()
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        bookings = Booking.query.filter(Booking.user_id == user.id, Booking.start_time <= now, Booking.end_time >= now).all()
         
         if not bookings:
             return jsonify([]), 200
@@ -37,7 +40,8 @@ class BookingList(MethodView):
     def post(self):
         """Create a new booking"""
         data = request.get_json()
-        user_id = get_jwt_identity()
+        username = get_jwt_identity()
+        user = User.query.filter(User.username == username).first()
         seat_id = data.get('seat_id')
         
         # Simple validation
@@ -59,7 +63,7 @@ class BookingList(MethodView):
             end_time = start_time + datetime.timedelta(hours=2)
 
             new_booking = Booking(
-                user_id=user_id,
+                user_id=user.id,
                 seat_id=seat_id,
                 start_time=start_time,
                 end_time=end_time,
@@ -81,7 +85,8 @@ class CheckIn(MethodView):
     def post(self):
         """Confirm a booking by checking in"""
         data = request.get_json()
-        user_id = get_jwt_identity()
+        username = get_jwt_identity()
+        user = User.query.filter(User.username == username).first()
         seat_identifier = data.get('seat_identifier')
 
         if not seat_identifier:
@@ -92,7 +97,7 @@ class CheckIn(MethodView):
             return jsonify({"message": "Seat not found"}), 404
 
         booking = Booking.query.filter_by(
-            user_id=user_id,
+            user_id=user.id,
             seat_id=seat.id,
             status=BookingStatus.PENDING_CHECKIN
         ).first()

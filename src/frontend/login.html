@@ -60,7 +60,6 @@
           password: '',
           loading: false,
           error: '',
-          // ADATTA QUI se il tuo endpoint è /auth/login o simile
           loginUrl: '/login'
         };
       },
@@ -92,8 +91,7 @@
               return;
             }
             localStorage.setItem('iot_jwt', token);
-            // opzionale: salva anche info utente se il server le restituisce
-            if (data.user) localStorage.setItem('iot_user', JSON.stringify(data.user));
+            localStorage.setItem('iot_username', this.username);
             // redirect alla pagina principale della UI
             window.location.href = './mappa';
           } catch (err) {
