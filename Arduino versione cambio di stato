@@ -1,0 +1,134 @@
+// ================== Configurazione pin ==================
+#define PIN_PULSANTE 4
+#define TRIG_PIN     10
+#define ECHO_PIN     11
+#define LED_STATO    13   // opzionale: LED integrato per mostrare OCCUPATA
+
+// ================== Parametri sensore ultrasuoni ==================
+const unsigned long TIMEOUT_US      = 25000UL; // ~4.3 m max (25 ms)
+const float         SOUND_CM_PER_US = 0.0343;  // 343 m/s -> 0.0343 cm/us
+
+// ================== Filtro letture ==================
+const int   NUM_SAMPLES = 5;     // campioni per mediana
+const float MIN_CM      = 5.0;   // scarta sotto 5 cm (zona cieca/rumore)
+const float MAX_CM      = 200.0; // scarta sopra 200 cm (adatta al tuo caso)
+
+// ================== Frequenze di lavoro ==================
+const unsigned long READ_EVERY_MS  = 150;   // leggi spesso (~6-7 Hz)
+
+// ================== Logica stato sedia ==================
+// Regola richiesta:
+//  - LIBERA   se (pulsante == LOW)  AND (nessuno entro 50 cm)
+//  - OCCUPATA altrimenti
+const float DIST_SOGLIA_CM = 50.0;          // 50 cm
+const unsigned long CONFIRM_MS = 600;       // conferma temporale contro falsi cambi
+
+enum StatoSedia { LIBERA = 0, OCCUPATA = 1 };
+StatoSedia stato_sedia = LIBERA;            // variabile richiesta
+StatoSedia candidate_state = LIBERA;
+unsigned long candidate_since = 0;
+
+// ================== Stato interno letture ==================
+unsigned long lastRead = 0;
+
+int   pulsante_curr = 0;
+float distanza_curr = NAN;
+
+// ================== Funzioni ==================
+float readOnceCm() {
+  // impulso di trigger: 10 µs HIGH
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+
+  // misura dell'eco con timeout
+  unsigned long durata = pulseIn(ECHO_PIN, HIGH, TIMEOUT_US);
+  if (durata == 0) return NAN; // nessun eco
+
+  float cm = (durata * SOUND_CM_PER_US) / 2.0;
+  if (cm < MIN_CM || cm > MAX_CM) return NAN; // fuori range realistico
+  return cm;
+}
+
+float medianOfSamples() {
+  float v[NUM_SAMPLES];
+  int n = 0;
+
+  // raccogli campioni validi
+  for (int i = 0; i < NUM_SAMPLES; i++) {
+    float cm = readOnceCm();
+    if (!isnan(cm)) v[n++] = cm;
+    delay(20); // piccolo intervallo tra campioni
+  }
+  if (n == 0) return NAN;
+
+  // ordina i n campioni (insertion sort semplice)
+  for (int i = 1; i < n; i++) {
+    float key = v[i];
+    int j = i - 1;
+    while (j >= 0 && v[j] > key) { v[j + 1] = v[j]; j--; }
+    v[j + 1] = key;
+  }
+
+  // mediana
+  if (n % 2 == 1) return v[n / 2];
+  else return (v[n / 2 - 1] + v[n / 2]) / 2.0;
+}
+
+void maybeUpdateStatoSedia(int pulsante, float distanza) {
+  // presenza entro 50 cm: solo se ho un valore e < 50
+  bool presenza_entro_50 = (!isnan(distanza) && distanza < DIST_SOGLIA_CM);
+
+  // Regola: LIBERA se NO pressione e NO presenza entro 50 cm; altrimenti OCCUPATA
+  StatoSedia desired = (pulsante == LOW && !presenza_entro_50) ? LIBERA : OCCUPATA;
+
+  unsigned long now = millis();
+
+  // cambio con conferma temporale (antirumore)
+  if (desired != candidate_state) {
+    candidate_state = desired;
+    candidate_since = now;
+  } else {
+    if ((now - candidate_since) >= CONFIRM_MS && stato_sedia != candidate_state) {
+      stato_sedia = candidate_state;
+
+      // --- UNICA STAMPA SOLO AL CAMBIO ---
+      Serial.println(stato_sedia == OCCUPATA ? "Stato sedia: OCCUPATA"
+                                             : "Stato sedia: LIBERA");
+
+      // LED opzionale
+      digitalWrite(LED_STATO, stato_sedia == OCCUPATA ? HIGH : LOW);
+    }
+  }
+}
+
+// ================== Setup ==================
+void setup() {
+  Serial.begin(9600);
+  pinMode(PIN_PULSANTE, INPUT);
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+  pinMode(LED_STATO, OUTPUT);
+  digitalWrite(LED_STATO, LOW);
+
+  // stampa stato iniziale
+  Serial.println("Stato sedia: LIBERA");
+}
+
+// ================== Loop ==================
+void loop() {
+  unsigned long now = millis();
+
+  // Leggi spesso per stabilizzare la misura
+  if (now - lastRead >= READ_EVERY_MS) {
+    lastRead = now;
+
+    pulsante_curr = digitalRead(PIN_PULSANTE);
+    distanza_curr = medianOfSamples();  // mediana di più letture
+
+    // Aggiorna la macchina a stati (stamperà SOLO al cambio)
+    maybeUpdateStatoSedia(pulsante_curr, distanza_curr);
+  }
+}
