@@ -1,0 +1,45 @@
+#include <ArduinoJson.h>
+
+int seatId = 12; // esempio: posto 12
+bool occupied = false;
+bool weightSensorOk = true;
+bool proximitySensorOk = true;
+
+void setup() {
+  Serial.begin(9600);
+}
+
+void loop() {
+  // Simulazione: alterna stato occupato/libero ogni 5 secondi
+  occupied = !occupied;
+  sendSeatStatus(seatId, occupied);
+  delay(5000);
+
+  // Simulazione: ogni 10 secondi segnala un sensore rotto
+  if (millis() % 10000 < 100) {
+    if (!weightSensorOk) {
+      sendSensorError("weight");
+    } else if (!proximitySensorOk) {
+      sendSensorError("proximity");
+    }
+  }
+}
+
+void sendSeatStatus(int id, bool isOccupied) {
+  StaticJsonDocument<200> doc;
+  doc["id"] = id;
+  doc["is_occupied"] = isOccupied;
+  serializeJson(doc, Serial);
+  Serial.println();
+}
+
+void sendSensorError(const char* sensorName) {
+  StaticJsonDocument<200> doc;
+  doc["sensor_error"] = sensorName;
+  serializeJson(doc, Serial);
+  Serial.println();
+}
+
+// invia questo
+// {"id":12,"is_occupied":true}
+// {"sensor_error":"weight"}
