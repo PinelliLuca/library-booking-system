@@ -1,0 +1,206 @@
+/*****************************************************
+   Monitoraggio sedia con doppio sensore
+   - sensore distanza (es. HC-SR04)
+   - sensore pressione (es. FSR / load cell analogica)
+   - rilevamento stato sedia
+   - conferma "si è alzato" dopo 10 secondi
+   - invio JSON su cambio stato
+*****************************************************/
+
+// ------------ CONFIG SENSORE DISTANZA --------------
+// PIN ultrasuoni (modifica se diversi)
+const int TRIG_PIN = 2;
+const int ECHO_PIN = 3;
+
+// Distanza massima (cm) per considerare "c'è qualcuno seduto"
+// TODO: metti la soglia reale che avevate misurato (es. 50 cm)
+const float SOGLIA_DISTANZA_CM = 50.0;
+
+
+// ------------ CONFIG SENSORE PRESSIONE -------------
+// PIN analogico per pressione / peso
+const int PIN_PRESSIONE = A0;
+
+// Valore minimo lettura analogica per dire "c'è peso"
+// TODO: metti la soglia reale (es. >200)
+const int SOGLIA_PRESSIONE = 200;
+
+
+// ------------ LOGICA STATO SEDIA -------------------
+bool sediaOccupata = false;        // stato attuale confermato
+bool sediaOccupataPrecedente = false; // stato precedente confermato
+
+// Per la conferma del rilascio (uscita dalla sedia)
+unsigned long tStartLibera = 0;    // quando ho visto per la prima volta "sedia libera"
+const unsigned long TEMPO_CONFERMA_LIBERA_MS = 10000UL; // 10 secondi
+
+
+// ------------ SETUP RETE / JSON --------------------
+// Qui metterai WiFi.begin(...) o quello che userai per mandare il JSON.
+// Per ora facciamo solo una funzione stub che stampa il JSON su Serial,
+// così puoi già vedere il formato e poi sostituire con la HTTP POST.
+void inviaAggiornamentoJSON(const char* nuovoStato) {
+  // Esempio di payload
+  // Puoi aggiungere seat_id, coordinate ecc. quando li sapete
+  Serial.println("== JSON UPDATE ==");
+  Serial.print("{\"status\":\"");
+  Serial.print(nuovoStato);
+  Serial.println("\"}");
+  Serial.println("=================");
+}
+
+
+
+// --------------------------------------------------
+// FUNZIONI LETTURA SENSORI
+// --------------------------------------------------
+
+// Calcola distanza in cm dall'HC-SR04
+float leggiDistanzaCm() {
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+
+  long durata = pulseIn(ECHO_PIN, HIGH, 30000UL); // timeout 30ms ~ 5m
+  // velocità suono ~343 m/s -> 29.1 us per cm andata+ritorno ~58 us/cm
+  // distanza (cm) = durata / 58.0
+  float distanza = durata / 58.0;
+
+  return distanza;
+}
+
+// Legge la pressione grezza dal pin analogico
+int leggiPressione() {
+  int val = analogRead(PIN_PRESSIONE);
+  return val;
+}
+
+// Ritorna true se secondo i sensori la sedia è occupata ORA (istantaneo)
+bool rilevaOccupataIstantanea() {
+  float distanza = leggiDistanzaCm();
+  int pressione = leggiPressione();
+
+  bool presenzaDistanza = (distanza > 0 && distanza <= SOGLIA_DISTANZA_CM);
+  bool presenzaPressione = (pressione >= SOGLIA_PRESSIONE);
+
+  // Regola: seduta SOLO se ENTRAMBI dicono "c'è qualcuno"
+  bool occupataNow = (presenzaDistanza && presenzaPressione);
+
+  // DEBUG opzionale
+  Serial.print("Distanza[cm]: ");
+  Serial.print(distanza, 1);
+  Serial.print(" | Pressione: ");
+  Serial.print(pressione);
+  Serial.print(" | occupataNow=");
+  Serial.println(occupataNow ? "TRUE" : "FALSE");
+
+  return occupataNow;
+}
+
+
+
+// --------------------------------------------------
+// SETUP
+// --------------------------------------------------
+void setup() {
+  Serial.begin(9600);
+
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+
+  // Leggo lo stato iniziale
+  sediaOccupata = rilevaOccupataIstantanea();
+  sediaOccupataPrecedente = sediaOccupata;
+
+  // Comunico stato iniziale una volta sola all'avvio
+  Serial.print("STATO INIZIALE: ");
+  Serial.println(sediaOccupata ? "OCCUPATA" : "LIBERA");
+  inviaAggiornamentoJSON(sediaOccupata ? "active" : "inactive");
+}
+
+
+
+// --------------------------------------------------
+// LOOP
+// --------------------------------------------------
+void loop() {
+
+  // 1. Leggi sensori e valuta lo stato istantaneo (grezzo)
+  bool occupataNow = rilevaOccupataIstantanea();
+  unsigned long adesso = millis();
+
+
+  // ------------------------------------------------
+  // CASO A: qualcuno SI SIEDE (LIBERA -> OCCUPATA)
+  // ------------------------------------------------
+  // In questo caso aggiorniamo SUBITO senza attese.
+  if (occupataNow == true && sediaOccupata == false) {
+    // è stata rilevata una nuova occupazione
+    sediaOccupata = true; // conferma immediata
+    // azzero eventuale timer di "libera"
+    tStartLibera = 0;
+
+    // Se lo stato è cambiato rispetto al precedente stato confermato
+    if (sediaOccupata != sediaOccupataPrecedente) {
+      Serial.println("CAMBIO STATO: ORA OCCUPATA");
+      inviaAggiornamentoJSON("active"); // active = sedia occupata
+      sediaOccupataPrecedente = sediaOccupata;
+    }
+
+    // fine caso A
+  }
+
+
+  // ------------------------------------------------
+  // CASO B: forse si è alzato (OCCUPATA -> LIBERA)
+  // ------------------------------------------------
+  // Qui NON cambiamo subito stato.
+  // Facciamo partire un timer di 10 secondi prima di dichiararla libera.
+  if (occupataNow == false && sediaOccupata == true) {
+    // abbiamo visto che "sembra libera" ma era occupata prima
+    if (tStartLibera == 0) {
+      // prima volta che vediamo libera -> avvia timer
+      tStartLibera = adesso;
+    } else {
+      // timer già partito: controlliamo se sono passati i 10 secondi
+      if (adesso - tStartLibera >= TEMPO_CONFERMA_LIBERA_MS) {
+        // Ricontrolla ORA che sia ancora libera per sicurezza
+        bool ricontrollo = rilevaOccupataIstantanea();
+        if (ricontrollo == false) {
+          // ok, è davvero libera: confermiamo stato libero
+          sediaOccupata = false;
+
+          if (sediaOccupata != sediaOccupataPrecedente) {
+            Serial.println("CAMBIO STATO: ORA LIBERA (dopo conferma 10s)");
+            inviaAggiornamentoJSON("inactive"); // inactive = sedia libera
+            sediaOccupataPrecedente = sediaOccupata;
+          }
+        } else {
+          // qualcuno si è risieduto entro i 10 secondi:
+          // annulliamo il timer, NON comunichiamo nulla
+          tStartLibera = 0;
+        }
+      }
+    }
+
+    // fine caso B
+  }
+
+
+  // ------------------------------------------------
+  // CASO C: stato stabile
+  // ------------------------------------------------
+  // - Se è ancora occupata, resettiamo eventuale timer di "libera"
+  //   perché significa che la persona è rimasta lì.
+  // - Se è ancora libera e già confermata libera, niente da fare.
+  if (occupataNow == true && sediaOccupata == true) {
+    // persona ancora seduta -> nessun timer di libera attivo
+    tStartLibera = 0;
+  }
+
+  // piccolo delay per evitare spam letture super ravvicinate
+  delay(200);
+}
