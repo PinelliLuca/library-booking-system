@@ -6,7 +6,7 @@ from src.backend.common.logger import logging
 with app.app_context():
     for row in range(5):
         for column in range(5):
-            seat = Seat(row=row, column=column, is_occupied=False)
+            seat = Seat(is_occupied=False, upd_user="populate_seats_init", upd_datetime=db.func.now())
             db.session.add(seat)
     db.session.commit()
     logging.info("Matrice 5x5 di posti creata.")

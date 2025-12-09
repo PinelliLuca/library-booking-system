@@ -1,21 +1,39 @@
+import datetime
 from flask import Blueprint, jsonify, request
 from src.backend.common.extensions import db
 from src.backend.seat.models import Seat
+from src.backend.booking.models import Booking
 from src.backend.notification.mail import send_email
+from src.backend.auth.auth import auth_required
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import and_
 
 seats_bp = Blueprint("seats", __name__, url_prefix="/seats")
 
 @seats_bp.route("/", methods=["GET"])
 def get_all_seats():
     try:
-        seats = Seat.query.all()
-        return jsonify([
-            {
+        now = datetime.datetime.now(datetime.timezone.utc)
+        results = db.session.query(
+            Seat, Booking.status
+        ).outerjoin(
+            Booking, and_(
+                Seat.id == Booking.seat_id,
+                Booking.status.in_(['pending_checkin', 'confirmed']), 
+                Booking.start_time <= now,
+                Booking.end_time >= now
+            )
+        ).all()
+
+        seats_data = []
+        for seat, booking_status in results:
+            seats_data.append({
                 "id": seat.id,
-                "is_occupied": seat.is_occupied
-            } for seat in seats
-        ])
+                "is_occupied": seat.is_occupied,
+                "booking_status": booking_status
+            })
+
+        return jsonify(seats_data)
     except SQLAlchemyError as e:
         return jsonify({"error": "Errore del database", "details": str(e)}), 500
     except Exception as e:
@@ -38,6 +56,7 @@ def get_single_seat(row, column):
 
 # PATCH: modifica lo stato di occupazione
 @seats_bp.route("/<int:seat_id>", methods=["PATCH"])
+@auth_required
 def update_seat_status(seat_id):
     try:
         seat = Seat.query.get(seat_id)
@@ -50,8 +69,8 @@ def update_seat_status(seat_id):
         booking = data.get('booking')
         if not seat_id:
             return jsonify({"error": "Missing 'seat_id'"}), 400
-        if not booking:
-            return jsonify({"error": "specifica il booking"}), 500
+        # if not booking:
+        #     return jsonify({"error": "specifica il booking"}), 500
         seat = Seat.query.get(seat_id)
         if not seat:
             return jsonify({"error": "Seat not found"}), 404
@@ -71,12 +90,11 @@ def update_seat_status(seat_id):
                 subject="Conferma prenotazione",
                 body=f"Hai prenotato il posto {seat_id}.",
             )
-            return jsonify({
-                "id": seat.id,
-                "is_occupied": seat.is_occupied
-            })
         except Exception as e:
-            return jsonify({"error": "Errore durante l'invio dell'email", "details": str(e)}), 500
+            # return jsonify({"error": "Errore durante l'invio dell'email", "details": str(e)}), 500
+            pass
+
+        return jsonify({"id": seat.id, "is_occupied": seat.is_occupied}), 200
 
     except SQLAlchemyError as e:
         db.session.rollback()  # Annulla eventuali modifiche non salvate
