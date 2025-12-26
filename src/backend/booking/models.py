@@ -4,6 +4,9 @@ from sqlalchemy import Enum
 class BookingStatus(Enum):
     PENDING_CHECKIN = "pending_checkin"
     CONFIRMED = "confirmed"
+    ACTIVE = "active"  # durante la fascia oraria, seat occupato
+    EXPIRED = "expired"  # non si è presentato / no-show
+    FORCE_RELEASED = "force_released"  # liberato per abbandono
     CANCELLED = "cancelled"
     COMPLETED = "completed"
 
@@ -17,6 +20,7 @@ class Booking(db.Model):
     end_time = db.Column(db.DateTime, nullable=False)
     status = db.Column(db.String, nullable=False, default=BookingStatus.PENDING_CHECKIN)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
 
     user = db.relationship('User', back_populates='bookings')
     seat = db.relationship('Seat', back_populates='bookings')
