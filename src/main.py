@@ -10,6 +10,9 @@ from flask import jsonify, send_from_directory
 from werkzeug.exceptions import HTTPException
 from src.backend.user.controller.user import user_bp
 from src.backend.booking.controller import booking_bp
+from src.backend.device.reading.model import TemperatureReading, SeatOccupancyReading
+from src.backend.seat.models import Seat
+from src.backend.seat.seat_suggestion.models import SeatSuggestion
 # Carica variabili da .env
 load_dotenv()
 
@@ -37,6 +40,10 @@ app.register_blueprint(booking_bp)
 # Configurazione SQLite
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'instance')), 'iot.db')}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+print("DB PATH:", app.config["SQLALCHEMY_DATABASE_URI"])
+print("ABSOLUTE PATH:", os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'instance', 'iot.db')))
+
 
 # Inizializza estensioni
 db.init_app(app)

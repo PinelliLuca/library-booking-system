@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 
 from src.backend.common.extensions import db
 
