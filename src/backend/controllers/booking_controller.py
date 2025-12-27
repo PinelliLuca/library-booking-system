@@ -1,116 +1,156 @@
+import datetime
 from flask import request, jsonify
 from flask.views import MethodView
 from flask_smorest import Blueprint
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from sqlalchemy import and_
+from sqlalchemy.exc import SQLAlchemyError
+
 from src.backend.common.extensions import db
 from src.backend.models.booking import Booking, BookingStatus
 from src.backend.models.user import User
 from src.backend.models.seat import Seat
-from flask_jwt_extended import jwt_required, get_jwt_identity
-import datetime
 
-booking_bp = Blueprint("bookings", __name__, url_prefix="/bookings", description="Operations on bookings")
+booking_bp = Blueprint("bookings", __name__, description="Booking management")
 
-@booking_bp.route("/")
+@booking_bp.route("/bookings")
 class BookingList(MethodView):
+
     @jwt_required()
     def get(self):
-        """Get all bookings for the current user"""
-        username = get_jwt_identity()
-        user = User.query.filter(User.username == username).first()
+        """Get current active bookings for the logged-in user"""
+        try:
+            username = get_jwt_identity()
+            user = User.query.filter_by(username=username).first()
 
-        now = datetime.datetime.now(datetime.timezone.utc)
-        bookings = Booking.query.filter(Booking.user_id == user.id, Booking.start_time <= now, Booking.end_time >= now).all()
-        
-        if not bookings:
-            return jsonify([]), 200
+            if not user:
+                return {"error": "User not found"}, 404
 
-        results = [
-            {
-                "id": b.id,
-                "seat_id": b.seat_id,
-                "start_time": b.start_time.isoformat(),
-                "end_time": b.end_time.isoformat(),
-                "status": b.status,
-            }
-            for b in bookings
-        ]
-        return jsonify(results), 200
+            now = datetime.datetime.now(datetime.timezone.utc)
 
+            bookings = Booking.query.filter(
+                Booking.user_id == user.id,
+                Booking.start_time <= now,
+                Booking.end_time >= now,
+                Booking.status.in_([
+                    BookingStatus.PENDING_CHECKIN,
+                    BookingStatus.CONFIRMED
+                ])
+            ).all()
+
+            return [
+                {
+                    "id": b.id,
+                    "seat_id": b.seat_id,
+                    "start_time": b.start_time.isoformat(),
+                    "end_time": b.end_time.isoformat(),
+                    "status": b.status.value
+                }
+                for b in bookings
+            ], 200
+
+        except SQLAlchemyError as e:
+            return {"error": "Database error", "details": str(e)}, 500
     @jwt_required()
     def post(self):
         """Create a new booking"""
-        data = request.get_json()
-        username = get_jwt_identity()
-        user = User.query.filter(User.username == username).first()
-        seat_id = data.get('seat_id')
-        
-        # Simple validation
-        if not all([seat_id]):
-            return jsonify({"message": "Missing seat_id"}), 400
-
-        # Check if seat exists and is available
-        seat = Seat.query.get(seat_id)
-        if not seat:
-            return jsonify({"message": "Seat not found"}), 404
-        
-        if seat.is_occupied:
-            return jsonify({"message": "Seat is already occupied"}), 400
-
-        # Create booking
         try:
-            # For simplicity, we'll set start_time to now and end_time to 2 hours from now.
-            start_time = datetime.datetime.utcnow()
-            end_time = start_time + datetime.timedelta(hours=2)
+            data = request.get_json()
+            username = get_jwt_identity()
+            user = User.query.filter_by(username=username).first()
 
-            new_booking = Booking(
+            if not user:
+                return {"error": "User not found"}, 404
+
+            seat_id = data.get("seat_id")
+            start_time = data.get("start_time")
+            end_time = data.get("end_time")
+
+            if not all([seat_id, start_time, end_time]):
+                return {"error": "Missing required fields"}, 400
+
+            start_time = datetime.datetime.fromisoformat(start_time)
+            end_time = datetime.datetime.fromisoformat(end_time)
+
+            if start_time >= end_time:
+                return {"error": "Invalid time range"}, 400
+
+            seat = Seat.query.get(seat_id)
+            if not seat or not seat.is_active:
+                return {"error": "Seat not available"}, 404
+
+            #  overlap check
+            overlapping = Booking.query.filter(
+                Booking.seat_id == seat_id,
+                Booking.status.in_([
+                    BookingStatus.PENDING_CHECKIN,
+                    BookingStatus.CONFIRMED
+                ]),
+                Booking.start_time < end_time,
+                Booking.end_time > start_time
+            ).first()
+
+            if overlapping:
+                return {"error": "Seat already booked in this time range"}, 409
+
+            booking = Booking(
                 user_id=user.id,
                 seat_id=seat_id,
                 start_time=start_time,
                 end_time=end_time,
                 status=BookingStatus.PENDING_CHECKIN
             )
-            db.session.add(new_booking)
-            
+
+            db.session.add(booking)
             db.session.commit()
 
-            return jsonify({"message": "Booking created successfully, pending check-in", "booking_id": new_booking.id}), 201
+            return {
+                "message": "Booking created, waiting for check-in",
+                "booking_id": booking.id
+            }, 201
 
-        except Exception as e:
+        except ValueError:
+            return {"error": "Invalid datetime format"}, 400
+        except SQLAlchemyError as e:
             db.session.rollback()
-            return jsonify({"message": "Failed to create booking", "error": str(e)}), 500
+            return {"error": "Database error", "details": str(e)}, 500
+@booking_bp.route("/bookings/check-in")
+class BookingCheckIn(MethodView):
 
-@booking_bp.route("/check-in")
-class CheckIn(MethodView):
     @jwt_required()
     def post(self):
-        """Confirm a booking by checking in"""
-        data = request.get_json()
-        username = get_jwt_identity()
-        user = User.query.filter(User.username == username).first()
-        seat_identifier = data.get('seat_identifier')
+        """Confirm booking via physical presence"""
+        try:
+            data = request.get_json()
+            seat_id = data.get("seat_id")
 
-        if not seat_identifier:
-            return jsonify({"message": "Missing seat_identifier"}), 400
+            if not seat_id:
+                return {"error": "Missing seat_id"}, 400
 
-        seat = Seat.query.filter_by(seat_identifier=seat_identifier).first()
-        if not seat:
-            return jsonify({"message": "Seat not found"}), 404
+            username = get_jwt_identity()
+            user = User.query.filter_by(username=username).first()
 
-        booking = Booking.query.filter_by(
-            user_id=user.id,
-            seat_id=seat.id,
-            status=BookingStatus.PENDING_CHECKIN
-        ).first()
+            if not user:
+                return {"error": "User not found"}, 404
 
-        if not booking:
-            return jsonify({"message": "No pending booking found for this seat and user"}), 404
+            now = datetime.datetime.now(datetime.timezone.utc)
 
-        # Check if the check-in is within the allowed time (15 minutes from booking start_time)
-        # Note: For simplicity, we are not checking the 15 minute window in this iteration,
-        # as the scheduled job will handle expired bookings.
-        
-        booking.status = BookingStatus.CONFIRMED
-        db.session.commit()
+            booking = Booking.query.filter(
+                Booking.user_id == user.id,
+                Booking.seat_id == seat_id,
+                Booking.status == BookingStatus.PENDING_CHECKIN,
+                Booking.start_time <= now,
+                Booking.end_time >= now
+            ).first()
 
-        return jsonify({"message": "Check-in successful, booking confirmed"}), 200
+            if not booking:
+                return {"error": "No valid booking found"}, 404
 
+            booking.status = BookingStatus.CONFIRMED
+            db.session.commit()
+
+            return {"message": "Check-in successful"}, 200
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            return {"error": "Database error", "details": str(e)}, 500

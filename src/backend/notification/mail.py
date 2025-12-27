@@ -1,36 +1,28 @@
-from flask import g, current_app
+from flask import current_app
 from flask_mail import Message
 from src.backend.common.extensions import mail
 from src.backend.models.user import User
 from src.backend.common.logger import logging
 
-def send_email(subject, body, recipients=None):
+
+def send_email(subject, body, recipients):
     """
-    Invia un'email all'utente autenticato o a destinatari specificati.
+    Invia un'email ai destinatari specificati.
     :param subject: Oggetto dell'email
     :param body: Corpo dell'email
-    :param recipients: Lista di destinatari (opzionale, altrimenti usa l'email dell'utente autenticato)
+    :param recipients: Lista di email (obbligatoria)
     """
-    # Recupera l'utente autenticato
     if not recipients:
-        if not hasattr(g, 'user'):
-            raise ValueError("Utente non autenticato")
-        
-        user = User.query.filter_by(username=g.user).first()
-        if not user or not user.mail:
-            raise ValueError("Email non trovata per l'utente autenticato")
-        
-        recipients = [user.mail]
+        raise ValueError("Nessun destinatario specificato per l'email")
 
-    # Crea il messaggio
     msg = Message(
         subject=subject,
         recipients=recipients,
         body=body,
         sender=current_app.config.get("MAIL_DEFAULT_SENDER")
     )
+
     try:
-    # Invia l'email
         mail.send(msg)
         logging.info(f"Email inviata a {recipients} con oggetto '{subject}'")
     except Exception as e:

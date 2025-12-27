@@ -1,111 +1,66 @@
 import datetime
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
+from sqlalchemy import and_
+from sqlalchemy.exc import SQLAlchemyError
+
 from src.backend.common.extensions import db
 from src.backend.models.seat import Seat
-from src.backend.models.booking import Booking
-from src.backend.notification.mail import send_email
-from src.backend.auth.auth import auth_required
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import and_
+from src.backend.models.booking import Booking, BookingStatus
 
-seats_bp = Blueprint("seats", __name__, url_prefix="/seats")
-
-@seats_bp.route("/", methods=["GET"])
+seats_bp = Blueprint("seats", __name__)
+@seats_bp.route("/seats", methods=["GET"])
 def get_all_seats():
+    """
+    Restituisce tutti i posti con:
+    - stato di prenotazione attuale
+    - stato di occupazione reale (derivato)
+    """
     try:
         now = datetime.datetime.now(datetime.timezone.utc)
+
         results = db.session.query(
-            Seat, Booking.status
+            Seat,
+            Booking.status
         ).outerjoin(
-            Booking, and_(
+            Booking,
+            and_(
                 Seat.id == Booking.seat_id,
-                Booking.status.in_(['pending_checkin', 'confirmed']), 
+                Booking.status.in_([
+                    BookingStatus.PENDING_CHECKIN,
+                    BookingStatus.CONFIRMED
+                ]),
                 Booking.start_time <= now,
                 Booking.end_time >= now
             )
         ).all()
 
-        seats_data = []
+        response = []
         for seat, booking_status in results:
-            seats_data.append({
-                "id": seat.id,
-                "is_occupied": seat.is_occupied,
-                "booking_status": booking_status
+            response.append({
+                "seat_id": seat.id,
+                "room_id": seat.room_id,
+                "active": seat.is_active,
+                "booking_status": booking_status.value if booking_status else None,
+                "real_occupancy": seat.currently_occupied  # campo derivato
             })
 
-        return jsonify(seats_data)
-    except SQLAlchemyError as e:
-        return jsonify({"error": "Errore del database", "details": str(e)}), 500
-    except Exception as e:
-        return jsonify({"error": "Errore interno del server", "details": str(e)}), 500
+        return jsonify(response), 200
 
-@seats_bp.route("/<int:row>/<int:column>", methods=["GET"])
-def get_single_seat(row, column):
+    except SQLAlchemyError as e:
+        return jsonify({"error": "Database error", "details": str(e)}), 500
+@seats_bp.route("/seats/<int:seat_id>", methods=["GET"])
+def get_single_seat(seat_id):
     try:
-        seat = Seat.query.get((row, column))
+        seat = Seat.query.get(seat_id)
         if not seat:
             return jsonify({"error": "Seat not found"}), 404
+
         return jsonify({
-            "id": seat.id,
-            "is_occupied": seat.is_occupied
-        })
-    except SQLAlchemyError as e:
-        return jsonify({"error": "Errore del database", "details": str(e)}), 500
-    except Exception as e:
-        return jsonify({"error": "Errore interno del server", "details": str(e)}), 500
-
-# PATCH: modifica lo stato di occupazione
-@seats_bp.route("/<int:seat_id>", methods=["PATCH"])
-@auth_required
-def update_seat_status(seat_id):
-    try:
-        seat = Seat.query.get(seat_id)
-        if not seat:
-            return jsonify({"error": "Seat not found"}), 404
-
-        data = request.get_json()
-        if "is_occupied" not in data:
-            return jsonify({"error": "Missing 'is_occupied' field"}), 400
-        booking = data.get('booking')
-        if not seat_id:
-            return jsonify({"error": "Missing 'seat_id'"}), 400
-        # if not booking:
-        #     return jsonify({"error": "specifica il booking"}), 500
-        seat = Seat.query.get(seat_id)
-        if not seat:
-            return jsonify({"error": "Seat not found"}), 404
-        if seat.is_occupied and booking == True:
-            return jsonify({"error": "Seat already booked"}), 400
-        elif booking == False and seat.is_occupied == False:
-            return jsonify({"error": "Seat already free"}), 400
-        elif booking == False and seat.is_occupied == True:
-            seat.is_occupied = False
-            db.session.commit()
-        else:
-            seat.is_occupied = True
-            db.session.commit()
-
-        try:
-            send_email(
-                subject="Conferma prenotazione",
-                body=f"Hai prenotato il posto {seat_id}.",
-            )
-        except Exception as e:
-            # return jsonify({"error": "Errore durante l'invio dell'email", "details": str(e)}), 500
-            pass
-
-        return jsonify({"id": seat.id, "is_occupied": seat.is_occupied}), 200
+            "seat_id": seat.id,
+            "room_id": seat.room_id,
+            "active": seat.is_active,
+            "real_occupancy": seat.currently_occupied
+        }), 200
 
     except SQLAlchemyError as e:
-        db.session.rollback()  # Annulla eventuali modifiche non salvate
-        return jsonify({"error": "Errore del database", "details": str(e)}), 500
-    except Exception as e:
-        return jsonify({"error": "Errore interno del server", "details": str(e)}), 500
-"""
-es di chiamata che verrà eseguita dall'arduino
-fetch("http://localhost:5000/seats/12", {
-  method: "PATCH",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ is_occupied: true })
-});
-"""
+        return jsonify({"error": "Database error", "details": str(e)}), 500

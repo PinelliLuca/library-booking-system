@@ -10,7 +10,7 @@ class User(db.Model):
     last_name = db.Column(db.String, nullable=False)
     role = db.Column(db.String(20), default="student")  # student | admin | staff
     # token = db.Column(db.String, nullable=False)
-    mail = db.Column(db.String, unique=True, nullable=False)
+    email = db.Column(db.String, unique=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     ins_istance=db.Column(db.DateTime, default=db.func.current_timestamp())
 
