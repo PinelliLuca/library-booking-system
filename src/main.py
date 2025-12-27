@@ -3,13 +3,18 @@ from flask_smorest import Api
 from src.backend.common.extensions import db, jwt, mail
 from dotenv import load_dotenv
 from datetime import timedelta
-from src.backend.controllers.login import login_bp
 import os
-from src.backend.controllers.seat_controller import seats_bp
 from flask import jsonify, send_from_directory
 from werkzeug.exceptions import HTTPException
 from src.backend.controllers.user_controller import user_bp
 from src.backend.controllers.booking_controller import booking_bp
+from src.backend.controllers.seat_controller import seats_bp
+from src.backend.controllers.login import login_bp
+from src.backend.controllers.seat_occupancy import occupancy_bp
+from src.backend.controllers.room_controller import room_bp
+from src.backend.controllers.energy_command import energy_bp
+from src.backend.controllers.seat_suggestion import suggestion_bp
+from src.backend.controllers.temperature_readings import temperature_bp
 
 # Carica variabili da .env
 load_dotenv()
@@ -35,6 +40,11 @@ app.register_blueprint(login_bp)
 app.register_blueprint(user_bp)
 app.register_blueprint(seats_bp)
 app.register_blueprint(booking_bp)
+app.register_blueprint(occupancy_bp)
+app.register_blueprint(room_bp)
+app.register_blueprint(energy_bp)
+app.register_blueprint(suggestion_bp)
+app.register_blueprint(temperature_bp)
 # Configurazione SQLite
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'instance')), 'iot.db')}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False

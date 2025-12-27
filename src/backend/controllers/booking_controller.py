@@ -79,7 +79,7 @@ class BookingList(MethodView):
             if not seat or not seat.is_active:
                 return {"error": "Seat not available"}, 404
 
-            # 🔒 overlap check
+            #  overlap check
             overlapping = Booking.query.filter(
                 Booking.seat_id == seat_id,
                 Booking.status.in_([
