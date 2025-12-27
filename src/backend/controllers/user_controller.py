@@ -29,7 +29,7 @@ def register():
 
         user = User(
             username=username,
-            password_hash=generate_password_hash(password),
+            password=generate_password_hash(password),
             first_name=first_name,
             last_name=last_name,
             email=email
