@@ -3,7 +3,7 @@ from flask_smorest import Api
 from src.backend.common.extensions import db, jwt, mail
 from dotenv import load_dotenv
 from datetime import timedelta
-from src.backend.auth.login import login_bp
+from src.backend.controllers.login import login_bp
 import os
 from src.backend.controllers.seat_controller import seats_bp
 from flask import jsonify, send_from_directory
