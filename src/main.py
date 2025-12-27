@@ -5,14 +5,12 @@ from dotenv import load_dotenv
 from datetime import timedelta
 from src.backend.auth.login import login_bp
 import os
-from src.backend.seat.controller.seat import seats_bp
+from src.backend.controllers.seat import seats_bp
 from flask import jsonify, send_from_directory
 from werkzeug.exceptions import HTTPException
-from src.backend.user.controller.user import user_bp
-from src.backend.booking.controller import booking_bp
-from src.backend.device.reading.model import TemperatureReading, SeatOccupancyReading
-from src.backend.seat.models import Seat
-from src.backend.seat.seat_suggestion.models import SeatSuggestion
+from src.backend.controllers.user import user_bp
+from src.backend.controllers.controller import booking_bp
+
 # Carica variabili da .env
 load_dotenv()
 

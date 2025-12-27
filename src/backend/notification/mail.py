@@ -1,7 +1,7 @@
 from flask import g, current_app
 from flask_mail import Message
 from src.backend.common.extensions import mail
-from src.backend.user.model.user import User
+from src.backend.models.user import User
 from src.backend.common.logger import logging
 
 def send_email(subject, body, recipients=None):

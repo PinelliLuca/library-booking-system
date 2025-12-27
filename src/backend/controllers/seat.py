@@ -1,8 +1,8 @@
 import datetime
 from flask import Blueprint, jsonify, request
 from src.backend.common.extensions import db
-from src.backend.seat.models import Seat
-from src.backend.booking.models import Booking
+from src.backend.models.seat import Seat
+from src.backend.models.booking import Booking
 from src.backend.notification.mail import send_email
 from src.backend.auth.auth import auth_required
 from sqlalchemy.exc import SQLAlchemyError

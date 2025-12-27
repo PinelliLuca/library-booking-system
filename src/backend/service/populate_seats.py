@@ -1,4 +1,4 @@
-from src.backend.seat.models import Seat
+from src.backend.models.seat import Seat
 from src.main import app
 from src.backend.common.extensions import db
 from src.backend.common.logger import logging
