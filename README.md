@@ -134,8 +134,8 @@ Il sistema preferisce concentrare gli studenti nelle stanze già attive.
 ## 👤 Ruoli utente
 
 - **Student**: prenotazione posti e visualizzazione suggerimenti
-- **Staff/Admin**: monitoraggio stanze, temperatura, consumo energetico
-- **System**: gestione automatica (rilasci, suggerimenti, comandi energia)
+- **Admin**: monitoraggio stanze, temperatura, consumo energetico
+
 
 ---
 
@@ -183,7 +183,6 @@ Se modifichi i model SQLAlchemy:
 
 Il database verrà ricreato automaticamente.
 
-(Alembic non è utilizzato per semplicità.)
 
 ---
 
