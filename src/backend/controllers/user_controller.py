@@ -3,8 +3,8 @@ from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta
 from sqlalchemy.exc import SQLAlchemyError
 from src.backend.common.extensions import db
-from src.backend.user.model.user import User
-from src.backend.user.model.user_token import UserToken
+from src.backend.models.user import User
+from src.backend.models.user_token import UserToken
 from src.backend.auth.token_generator import generate_token
 from src.backend.common.logger import logging
 # Creazione del Blueprint

@@ -5,11 +5,12 @@ from dotenv import load_dotenv
 from datetime import timedelta
 from src.backend.auth.login import login_bp
 import os
-from src.backend.seat.controller.seat import seats_bp
+from src.backend.controllers.seat_controller import seats_bp
 from flask import jsonify, send_from_directory
 from werkzeug.exceptions import HTTPException
-from src.backend.user.controller.user import user_bp
-from src.backend.booking.controller import booking_bp
+from src.backend.controllers.user_controller import user_bp
+from src.backend.controllers.booking_controller import booking_bp
+
 # Carica variabili da .env
 load_dotenv()
 
@@ -37,6 +38,10 @@ app.register_blueprint(booking_bp)
 # Configurazione SQLite
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'instance')), 'iot.db')}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+print("DB PATH:", app.config["SQLALCHEMY_DATABASE_URI"])
+print("ABSOLUTE PATH:", os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'instance', 'iot.db')))
+
 
 # Inizializza estensioni
 db.init_app(app)

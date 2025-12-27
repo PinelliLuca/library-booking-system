@@ -2,9 +2,9 @@ from flask import request, jsonify
 from flask.views import MethodView
 from flask_smorest import Blueprint
 from src.backend.common.extensions import db
-from src.backend.booking.models import Booking, BookingStatus
-from src.backend.user.model.user import User
-from src.backend.seat.models import Seat
+from src.backend.models.booking import Booking, BookingStatus
+from src.backend.models.user import User
+from src.backend.models.seat import Seat
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import datetime
 
