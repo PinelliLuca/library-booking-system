@@ -52,6 +52,9 @@ Il db è sqllite, quindi scarica e avvia DBeaver -> file-> trova file per nome e
 Una volta aperto puoi selezionare "diagramma" per vedere le relazioni tra le tabelle. 
 Qualunque modifica al db va fatta o tramite script oppure modificando i file model e avviando il progetto, che aggiornerà il db in automatico.
 
+## ** ATTENZIONE Occorre eliminare il file iot.db se si vogliono vedere le modifiche **
+(o usare alembic ma è complicato, lasciate stare). 
+Esegui il progetto di nuovo e viene ricreato il db
 ## Aggiornamento modifiche: 
 Sono stati create diverse tabelle e relazioni per rappresentare i digital twin, tabelle di lettura e tabelle i "comando" per l'energia. 
 Ho anche creato un seatSuggestion in modo che venga calcolato dinamicamente (AI - like) un sistema di suggerimento dei posti a sedere basato su uno score calcolato in base a diversi fattori (vicinanza ad altri posti occupati, vicinanza a prese di corrente, vicinanza a finestre, ecc..)
