@@ -5,6 +5,7 @@ from flask_jwt_extended import create_access_token
 
 from src.backend.common.extensions import db
 from src.backend.models.user import User
+from src.backend.notification.mail import send_email
 
 user_bp = Blueprint("users", __name__)
 @user_bp.route("/register", methods=["POST"])
@@ -37,7 +38,12 @@ def register():
 
         db.session.add(user)
         db.session.commit()
-
+ #       try:
+ #           send_email(subject="Registrazione completata",
+ #               body=f"Ciao {user.first_name}, la tua registrazione è avvenuta con successo!",
+ #               recipients=[user.email])
+ #       except Exception as e:
+ #           raise
         return {
             "message": "User registered successfully",
             "user_id": user.id
