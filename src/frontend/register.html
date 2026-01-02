@@ -33,7 +33,7 @@
     </label>
 
     <label>Email
-      <input v-model="mail" type="email" autocomplete="email" />
+      <input v-model="email" type="email" autocomplete="email" />
     </label>
 
     <label>Password
@@ -64,7 +64,7 @@
           username: '',
           first_name: '',
           last_name: '',
-          mail: '',
+          email: '',
           password: '',
           loading: false,
           error: ''
@@ -76,7 +76,7 @@
         },
         async register() {
           this.error = '';
-          if (!this.username || !this.first_name || !this.last_name || !this.mail || !this.password) {
+          if (!this.username || !this.first_name || !this.last_name || !this.email || !this.password) {
             this.error = 'Compila tutti i campi';
             return;
           }
@@ -90,7 +90,7 @@
                 password: this.password,
                 first_name: this.first_name,
                 last_name: this.last_name,
-                mail: this.mail
+                email: this.email
               })
             });
             const data = await res.json().catch(()=>({}));

@@ -35,6 +35,11 @@
     button.primary { background:#0b5ed7; color:#fff; border-color:#095cb0; }
     button.error { background:#ff0707; color:#fff; border-color:#ff0707; }
     #qr-reader { width: 500px; }
+    /* Room grouping */
+    .room-section { margin-bottom: 18px; padding: 6px 0; }
+    .room-section h3 { font-size: 16px; margin: 8px 0; color: #333; }
+    .room-divider { height: 6px; background: linear-gradient(90deg,#f1f1f1,#e6e6e6); border-radius:3px; margin-top:12px; }
+    @media (max-width:720px){ .room-divider{ height:4px } }
   </style>
 </head>
 <body>
@@ -62,23 +67,29 @@
     </div>
 
 
-    <div v-if="gridRows.length === 0">Caricamento posti…</div>
+    <div v-if="seats.length === 0">Caricamento posti…</div>
 
-    <div class="tables-area" v-else>
-      <div class="table-circle" v-for="(row, rIdx) in gridRows" :key="'table-'+rIdx">
-        <div class="table-surface" :title="'Tavolo ' + (rIdx + 1)"></div>
-        <div class="seats-wrapper">
-          <div
-            v-for="(seat, sIdx) in row"
-            :key="seatKey(seat, rIdx*5 + sIdx)"
-            class="seat"
-            :class="seatClass(seat)"
-            @click="onSeatClick(seat)"
-            :title="seatTitle(seat)"
-          >
-            {{ seatLabel(seat) }}
+    <div v-else>
+      <div class="room-section" v-for="roomGroup in groupedRooms" :key="'room-'+(roomGroup.room.id || roomGroup.room.name)">
+        <h3 style="margin:6px 0">{{ roomGroup.room.name }}</h3>
+        <div class="tables-area">
+          <div class="table-circle" v-for="(row, rIdx) in roomGroup.rows" :key="'table-'+roomGroup.room.id+'-'+rIdx">
+            <div class="table-surface" :title="'Tavolo ' + (rIdx + 1)"></div>
+            <div class="seats-wrapper">
+              <div
+                v-for="(seat, sIdx) in row"
+                :key="seatKey(seat, rIdx*5 + sIdx)"
+                class="seat"
+                :class="seatClass(seat)"
+                @click="onSeatClick(seat)"
+                :title="seatTitle(seat)"
+              >
+                {{ seatLabel(seat) }}
+              </div>
+            </div>
           </div>
         </div>
+        <div class="room-divider" aria-hidden="true"></div>
       </div>
     </div>
 
@@ -100,6 +111,7 @@
       data() {
         return {
           seats: [],
+          rooms: [],
           pollIntervalSec: 30,
           pollTimer: null,
           userBookings: [],
@@ -124,15 +136,35 @@
         },
         pendingBooking() {
             return this.userBookings.find(b => b.status === 'pending_checkin');
+        },
+        groupedRooms() {
+          // Group seats by room_id and chunk into rows of 5
+          const map = new Map();
+          for (const seat of this.seats) {
+            const rid = seat.room_id || 0;
+            if (!map.has(rid)) map.set(rid, []);
+            map.get(rid).push(seat);
+          }
+          const result = [];
+          for (const [rid, seats] of map.entries()) {
+            const perRow = 5;
+            const rows = [];
+            for (let i = 0; i < seats.length; i += perRow) rows.push(seats.slice(i, i + perRow));
+            const room = this.rooms.find(r => r.id === Number(rid)) || { id: rid, name: rid ? `Room ${rid}` : 'Unassigned' };
+            result.push({ room, rows });
+          }
+          // Sort by room id for stable ordering (Unassigned will be first)
+          result.sort((a, b) => (Number(a.room.id) || 0) - (Number(b.room.id) || 0));
+          return result;
         }
       },
       methods: {
         seatKey(seat, rIdx) {
-          if (seat.id) return `id-${seat.id}`;
+          if (seat.seat_id) return `id-${seat.seat_id}`;
           return `id-${rIdx}`;
         },
         seatLabel(seat) {
-          if (seat.id !== undefined) return `#${seat.id}`;
+          if (seat.seat_id !== undefined) return `#${seat.seat_id}`;
           return '?';
         },
         seatClass(seat) {
@@ -162,13 +194,13 @@
                 return;
             }
 
-            if (!confirm(`Vuoi prenotare il posto #${seat.id}?`)) return;
+            if (!confirm(`Vuoi prenotare il posto #${seat.seat_id}?`)) return;
 
             try {
                 const response = await this.authFetch('/bookings/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ seat_id: seat.id })
+                    body: JSON.stringify({ seat_id: seat.seat_id })
                 });
                 if (!response.ok) {
                     const err = await response.json().catch(()=>({}));
@@ -191,6 +223,19 @@
             } catch (err) {
                 console.error("fetchUserBookings error", err);
             }
+        },
+
+        async fetchRooms() {
+          try {
+            const res = await this.authFetch('/rooms');
+            if (!res.ok) {
+              console.error('fetchRooms error');
+              return;
+            }
+            this.rooms = await res.json();
+          } catch (err) {
+            console.error('fetchRooms failed', err);
+          }
         },
 
         startScanner() {
@@ -292,6 +337,8 @@
           window.location.href = './login';
         } else {
           this.username = localStorage.getItem('iot_username') || '';
+          // Load rooms first (so names are available when seats arrive)
+          this.fetchRooms();
           this.fetchSeats();
           this.fetchUserBookings();
         }

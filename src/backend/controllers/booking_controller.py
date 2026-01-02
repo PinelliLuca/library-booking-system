@@ -13,7 +13,7 @@ from src.backend.models.seat import Seat
 
 booking_bp = Blueprint("bookings", __name__, description="Booking management")
 
-@booking_bp.route("/bookings")
+@booking_bp.route("/bookings", strict_slashes=False)
 class BookingList(MethodView):
 
     @jwt_required()
