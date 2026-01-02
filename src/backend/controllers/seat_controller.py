@@ -16,7 +16,7 @@ def get_all_seats():
     - stato di occupazione reale (derivato)
     """
     try:
-        now = datetime.datetime.now(datetime.timezone.utc)
+        now = datetime.datetime.now()
 
         results = db.session.query(
             Seat,
@@ -40,7 +40,7 @@ def get_all_seats():
                 "seat_id": seat.id,
                 "room_id": seat.room_id,
                 "active": seat.is_active,
-                "booking_status": booking_status.value if booking_status else None,
+                "booking_status": booking_status if booking_status else None,
                 "real_occupancy": seat.is_occupied  # campo derivato
             })
 
