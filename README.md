@@ -43,9 +43,10 @@ Il sistema è composto da tre livelli principali:
 - **SQLite** come database
 
 ### 🌐 Frontend
-- **Vue.js**
-- Interfaccia studenti per prenotazioni
-- Dashboard admin per monitoraggio energetico
+- **Vue 3** (usato tramite CDN)
+- Pagine HTML standalone in `src/frontend` (es.: `index.html`, `login.html`, `register.html`, `admin_dashboard.html`)
+- Librerie leggere usate: `html5-qrcode` per il check-in via QR (e altre dipendenze via CDN)
+- Le rotte backend che servono i template sono prefissate con `frontend` (es. `/mappa`, `/login`, `/register`)
 
 ---
 
@@ -163,6 +164,22 @@ py -3.12 -m venv IoT_env
 IoT_env\Scripts\activate
 pip install -r requirements.txt
 ```
+
+### 3️⃣ Avvio progetto
+
+```bash
+python -m src.main
+```
+
+## 4️⃣ Utility script: populate_seats.py
+Il file `src/backend/service/populate_seats.py` è uno script di utilità che crea alcune stanze di esempio e popola i posti nel database per scopi di sviluppo e demo. Esegui lo script con l'ambiente attivo (ad es. `python -m src.backend.service.populate_seats`) per aggiungere stanze/posti se non sono già presenti.
+
+```bash
+python -m src.backend.service.populate_seats
+```
+
+## 4️⃣ Accedere al front-end
+Per accedere all'applicativo, accedere al browser e digitare `http://localhost:5000/frontend/login` per iniziare.
 
 ---
 

@@ -92,6 +92,7 @@
             }
             localStorage.setItem('iot_jwt', token);
             localStorage.setItem('iot_username', this.username);
+            localStorage.setItem('iot_user_role', data.role || 'student');
             // redirect alla pagina principale della UI
             window.location.href = './mappa';
           } catch (err) {

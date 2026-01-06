@@ -59,6 +59,7 @@
       </label>
       <button @click="fetchSeats" class="primary">Aggiorna ora</button>
       <div style="margin-left:auto;">
+        <a v-if="userRole === 'admin'" href="./admin_dashboard" style="margin-right: 15px; text-decoration: none; background: #6c757d; color: white; padding: 6px 10px; border-radius: 6px; font-size: 14px;">Admin Dashboard</a>
         Ciao, <strong>{{ username }}</strong>
       </div>
       <div style="right:20px;top:20px;">
@@ -147,6 +148,8 @@
           userBookings: [],
           showScanner: false,
           html5QrcodeScanner: null,
+          username: '',
+          userRole: '',
           // scannerError: '',
           // Booking modal state
           showBookingModal: false,
@@ -459,6 +462,7 @@
           window.location.href = './login';
         } else {
           this.username = localStorage.getItem('iot_username') || '';
+          this.userRole = localStorage.getItem('iot_user_role') || 'student';
           // Load rooms first (so names are available when seats arrive)
           this.fetchRooms();
           this.fetchSeats();
