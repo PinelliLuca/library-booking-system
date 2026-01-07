@@ -218,56 +218,27 @@ Invio dati sensori (peso + prossimità) dal microcontrollore.
 
 ## 🌡️ IOT – TEMPERATURE
 
-🔹 Ingestione temperatura stanza  
-POST /temperatures
+### 🔹 Ingestione temperatura stanza
 
-Input JSON
+**POST** `/temperatures`
+
+**Input JSON**
+```json
 {
   "room_id": 2,
   "temperature": 23.4
 }
+```
 
-Output JSON
+**Output JSON**
+```json
 {
   "message": "Temperature recorded"
 }
+```
 
-Descrizione  
-Riceve una lettura di temperatura inviata dal microcontrollore e la salva nel backend associandola a una stanza.
-
----
-
-🔹 Ultima temperatura registrata  
-GET /temperatures/latest
-
-Output JSON
-{
-  "room_id": 2,
-  "temperature": 23.4,
-  "timestamp": "2026-01-03T10:15:00"
-}
-
-Descrizione  
-Restituisce l’ultima temperatura disponibile per una stanza.  
-Se non sono presenti dati, il backend risponde con un messaggio di assenza dati.
-
----
-
-🔹 Statistiche temperature  
-GET /temperatures/stats
-
-Output JSON
-{
-  "min": 19.8,
-  "max": 25.1,
-  "avg": 22.6,
-  "count": 42
-}
-
-Descrizione  
-Calcola statistiche di base sulle temperature raccolte (minima, massima, media e numero di campioni).  
-Questi dati costituiscono la base per analisi energetiche e future predizioni di consumo.
-
+**Descrizione**  
+Registra una lettura di temperatura per una stanza.
 
 ---
 
