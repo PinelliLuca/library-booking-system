@@ -36,6 +36,7 @@ app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@example.com')
 
+
 app.register_blueprint(login_bp)
 app.register_blueprint(user_bp)
 app.register_blueprint(seats_bp)
@@ -44,7 +45,7 @@ app.register_blueprint(occupancy_bp)
 app.register_blueprint(room_bp)
 app.register_blueprint(energy_bp)
 app.register_blueprint(suggestion_bp)
-app.register_blueprint(temperature_bp)
+app.register_blueprint(temperature_bp, url_prefix="/api")
 # Configurazione SQLite
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'instance')), 'iot.db')}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
