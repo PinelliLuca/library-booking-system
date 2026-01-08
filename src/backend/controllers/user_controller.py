@@ -80,3 +80,10 @@ def login():
 
     except SQLAlchemyError as e:
         return {"error": "Database error", "details": str(e)}, 500
+@user_bp.route('/test-email')
+def test_email():
+    try:
+        send_email("Test invio", "Corpo di prova", ["tuoindirizzo@example.com"])
+        return {"message": "Email inviata (in background)"}, 200
+    except Exception as e:
+        return {"error": "Invio fallito", "details": str(e)}, 500

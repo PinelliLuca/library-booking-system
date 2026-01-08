@@ -3,7 +3,6 @@ from flask import request, jsonify
 from flask.views import MethodView
 from flask_smorest import Blueprint
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from sqlalchemy import and_
 from sqlalchemy.exc import SQLAlchemyError
 
 from src.backend.common.extensions import db
