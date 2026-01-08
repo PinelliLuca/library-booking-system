@@ -83,7 +83,7 @@ def login():
 @user_bp.route('/test-email')
 def test_email():
     try:
-        send_email("Test invio", "Corpo di prova", ["tuoindirizzo@example.com"])
+        send_email("Test invio", "Corpo di prova", ["238134@studenti.unimore.it"])
         return {"message": "Email inviata (in background)"}, 200
     except Exception as e:
         return {"error": "Invio fallito", "details": str(e)}, 500
