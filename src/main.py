@@ -108,6 +108,10 @@ def serve_frontend_login():
 @app.route("/frontend/register")
 def serve_frontend_register():
     return send_from_directory("frontend", "register.html")
+
+@app.route("/frontend/admin_dashboard")
+def serve_frontend_admin_dashboard():
+    return send_from_directory("frontend", "admin_dashboard.html")
 # Crea le tabelle se non esistono
 with app.app_context():
     db.create_all()

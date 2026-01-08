@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8" />
+    <title>Admin Dashboard - IoT Library</title>
+    <style>
+        body { 
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; 
+            background-color: #f8f9fa; 
+            color: #212529; 
+            margin: 0; 
+            padding: 20px; 
+        }
+        .top-bar { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 25px; 
+        }
+        h1 { 
+            margin: 0; 
+            font-size: 28px; 
+            font-weight: 600;
+        }
+        .nav-link { 
+            text-decoration: none; 
+            background-color: #0d6efd; 
+            color: white; 
+            padding: 10px 18px; 
+            border-radius: 8px; 
+            font-weight: 500; 
+            transition: background-color 0.2s ease;
+        }
+        .nav-link:hover { background-color: #0b5ed7; }
+        
+        .section-title {
+            font-size: 22px;
+            font-weight: 600;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 8px;
+        }
+
+        .dashboard-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); 
+            gap: 22px; 
+        }
+
+        .card { 
+            background-color: #fff; 
+            border-radius: 12px; 
+            padding: 20px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            display: flex;
+            flex-direction: column;
+        }
+        .card h3 { 
+            margin-top: 0; 
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .stat { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            font-size: 15px; 
+            padding: 10px 5px; 
+            border-bottom: 1px solid #f2f2f2; 
+        }
+        .stat:last-child { border-bottom: none; }
+        .stat-label { color: #495057; }
+        .stat-value { 
+            font-weight: 600; 
+            font-size: 17px; 
+            color: #0d6efd;
+        }
+        .stat-value.secondary { color: #6c757d; }
+        .stat-value.bad { color: #dc3545; }
+        .stat-value.good { color: #198754; }
+
+        .chart-placeholder {
+            background-color: #f8f9fa;
+            border: 1px dashed #ced4da;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #6c757d;
+            font-size: 14px;
+            font-weight: 500;
+            margin-top: 10px;
+            min-height: 150px;
+            flex-grow: 1;
+        }
+
+        .list { list-style-type: none; padding-left: 0; margin: 0; }
+        .list-item { display: flex; justify-content: space-between; padding: 8px 5px; border-bottom: 1px solid #f2f2f2; }
+        .list-item:last-child { border-bottom: none; }
+        .list-item .label { font-weight: 500; }
+        .list-item .value { font-weight: 600; color: #495057; }
+
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <h1>Admin Dashboard</h1>
+        <a href="./mappa" class="nav-link">Torna alla Mappa</a>
+    </div>
+
+    <!-- SEZIONE UTILIZZO E OCCUPAZIONE -->
+    <h2 class="section-title">Utilizzo e Occupazione</h2>
+    <div class="dashboard-grid">
+        <div class="card">
+            <h3>Panoramica Generale</h3>
+            <div class="stat"><span class="stat-label">Posti Occupati / Totali</span><span class="stat-value">68 / 150</span></div>
+            <div class="stat"><span class="stat-label">Tasso Occupazione Globale</span><span class="stat-value">45%</span></div>
+            <div class="stat"><span class="stat-label">Durata Media Permanenza</span><span class="stat-value secondary">1h 45m</span></div>
+            <div class="stat"><span class="stat-label">Tasso di "No-Show" (Oggi)</span><span class="stat-value bad">12%</span></div>
+        </div>
+        <div class="card">
+            <h3>Occupazione per Sala</h3>
+            <div class="stat"><span class="stat-label">Sala Nord</span><span class="stat-value">75%</span></div>
+            <div class="stat"><span class="stat-label">Sala Est</span><span class="stat-value">50%</span></div>
+            <div class="stat"><span class="stat-label">Sala Ovest</span><span class="stat-value">25%</span></div>
+            <div class="stat"><span class="stat-label">Sala Sud</span><span class="stat-value good">90%</span></div>
+        </div>
+        <div class="card">
+            <h3>Posti "Top & Flop" (Ultimi 30gg)</h3>
+            <ul class="list">
+                <li class="list-item"><span class="label">🥇 Posto più prenotato</span> <span class="value">#12 (Sala Sud)</span></li>
+                <li class="list-item"><span class="label">🥈 2° più prenotato</span> <span class="value">#34 (Sala Sud)</span></li>
+                <li class="list-item"><span class="label">🥉 3° più prenotato</span> <span class="value">#5 (Sala Nord)</span></li>
+                <li class="list-item"><span class="label" style="color:#dc3545">🏚️ Meno prenotato</span> <span class="value">#88 (Sala Ovest)</span></li>
+            </ul>
+        </div>
+        <div class="card">
+            <h3>Ore di Punta (Prenotazioni di Oggi)</h3>
+            <div class="chart-placeholder">
+                [Grafico a barre: Ore del giorno vs. Numero prenotazioni]
+            </div>
+        </div>
+    </div>
+
+    <!-- SEZIONE ENERGETICA E AMBIENTALE -->
+    <h2 class="section-title">Energia e Ambiente</h2>
+    <div class="dashboard-grid">
+        <div class="card">
+            <h3>Consumi Energetici</h3>
+            <div class="stat"><span class="stat-label">Consumo Istantaneo</span><span class="stat-value">3.4 kW</span></div>
+            <div class="stat"><span class="stat-label">Consumo Totale (Oggi)</span><span class="stat-value secondary">45 kWh</span></div>
+            <div class="stat"><span class="stat-label">Picco di Consumo (Oggi)</span><span class="stat-value bad">5.1 kW</span></div>
+             <div class="stat"><span class="stat-label">Interventi Manuali/Automatici</span><span class="stat-value secondary">8 / 56</span></div>
+        </div>
+        <div class="card">
+            <h3>Stato Ambientale Sale</h3>
+            <div class="stat"><span class="stat-label">Temperatura Media</span><span class="stat-value good">22.5 °C</span></div>
+            <div class="stat"><span class="stat-label">Qualità Aria (AQI medio)</span><span class="stat-value good">35 (Buona)</span></div>
+            <div class="stat"><span class="stat-label">Umidità Media</span><span class="stat-value secondary">55%</span></div>
+        </div>
+        <div class="card">
+            <h3>Correlazione Occupazione/Energia (Sala Nord)</h3>
+            <div class="chart-placeholder">
+                [Grafico a dispersione: N° Utenti vs. Consumo kW]
+            </div>
+        </div>
+        <div class="card">
+            <h3>Andamento Temperature (Ultime 24h)</h3>
+            <div class="chart-placeholder">
+                [Grafico lineare: Andamento T° Sala Nord vs T° Sala Sud]
+            </div>
+        </div>
+    </div>
+
+    <!-- SEZIONE UTENTI E OPERATIVA -->
+    <h2 class="section-title">Utenti e Operatività</h2>
+    <div class="dashboard-grid">
+        <div class="card">
+            <h3>Panoramica Utenti</h3>
+            <div class="stat"><span class="stat-label">Utenti Attivi (30gg)</span><span class="stat-value">98</span></div>
+            <div class="stat"><span class="stat-label">Nuovi Utenti (7gg)</span><span class="stat-value good">14</span></div>
+            <div class="stat"><span class="stat-label">Totale Utenti registrati</span><span class="stat-value secondary">234</span></div>
+        </div>
+        <div class="card">
+            <h3>Distribuzione Ruoli</h3>
+            <div class="stat"><span class="stat-label">Studenti</span><span class="stat-value">210</span></div>
+            <div class="stat"><span class="stat-label">Staff</span><span class="stat-value">12</span></div>
+            <div class="stat"><span class="stat-label">Admin</span><span class="stat-value">2</span></div>
+        </div>
+        <div class="card">
+            <h3>Stato Dispositivi e Manutenzione</h3>
+            <div class="stat"><span class="stat-label">Sensori Offline</span><span class="stat-value bad">2</span></div>
+            <div class="stat"><span class="stat-label">Posti disattivati</span><span class="stat-value secondary">3</span></div>
+             <ul class="list" style="margin-top: 10px;">
+                <li class="list-item"><span class="label">⚠️ Sensore T° - Sala Est</span> <span class="value">Offline (3h)</span></li>
+                <li class="list-item"><span class="label">⚠️ Sensore Posto #45</span> <span class="value">Offline (2gg)</span></li>
+            </ul>
+        </div>
+    </div>
+
+</body>
+</html>

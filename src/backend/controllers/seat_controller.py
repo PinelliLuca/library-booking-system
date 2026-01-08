@@ -8,7 +8,7 @@ from src.backend.models.seat import Seat
 from src.backend.models.booking import Booking, BookingStatus
 
 seats_bp = Blueprint("seats", __name__)
-@seats_bp.route("/seats", methods=["GET"])
+@seats_bp.route("/seats", methods=["GET"], strict_slashes=False)
 def get_all_seats():
     """
     Restituisce tutti i posti con:
@@ -16,7 +16,7 @@ def get_all_seats():
     - stato di occupazione reale (derivato)
     """
     try:
-        now = datetime.datetime.now(datetime.timezone.utc)
+        now = datetime.datetime.now()
 
         results = db.session.query(
             Seat,
@@ -40,8 +40,8 @@ def get_all_seats():
                 "seat_id": seat.id,
                 "room_id": seat.room_id,
                 "active": seat.is_active,
-                "booking_status": booking_status.value if booking_status else None,
-                "real_occupancy": seat.currently_occupied  # campo derivato
+                "booking_status": booking_status if booking_status else None,
+                "real_occupancy": seat.is_occupied  # campo derivato
             })
 
         return jsonify(response), 200
@@ -59,7 +59,7 @@ def get_single_seat(seat_id):
             "seat_id": seat.id,
             "room_id": seat.room_id,
             "active": seat.is_active,
-            "real_occupancy": seat.currently_occupied
+            "real_occupancy": seat.is_occupied
         }), 200
 
     except SQLAlchemyError as e:

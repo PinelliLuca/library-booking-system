@@ -35,6 +35,18 @@
     button.primary { background:#0b5ed7; color:#fff; border-color:#095cb0; }
     button.error { background:#ff0707; color:#fff; border-color:#ff0707; }
     #qr-reader { width: 500px; }
+    /* Room grouping */
+    .room-section { margin-bottom: 18px; padding: 6px 0; }
+    .room-section h3 { font-size: 16px; margin: 8px 0; color: #333; }
+    .room-divider { height: 6px; background: linear-gradient(90deg,#f1f1f1,#e6e6e6); border-radius:3px; margin-top:12px; }
+    @media (max-width:720px){ .room-divider{ height:4px } }
+
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; display:flex; align-items:center; justify-content:center; background: rgba(0,0,0,0.3); z-index: 9999; }
+    .modal { background: #fff; padding: 14px; border-radius: 8px; width: 420px; max-width: calc(100% - 32px); box-shadow: 0 8px 30px rgba(0,0,0,0.18); }
+    .modal input[type="datetime-local"] { padding:6px 8px; border-radius:6px; border:1px solid #ccc; }
+    .modal h3 { margin:0 0 8px 0; }
+    @media (max-width:420px){ .modal{ width:95% } }
   </style>
 </head>
 <body>
@@ -47,6 +59,7 @@
       </label>
       <button @click="fetchSeats" class="primary">Aggiorna ora</button>
       <div style="margin-left:auto;">
+        <a v-if="userRole === 'admin'" href="./admin_dashboard" style="margin-right: 15px; text-decoration: none; background: #6c757d; color: white; padding: 6px 10px; border-radius: 6px; font-size: 14px;">Admin Dashboard</a>
         Ciao, <strong>{{ username }}</strong>
       </div>
       <div style="right:20px;top:20px;">
@@ -58,27 +71,73 @@
         <h3>Hai una prenotazione in attesa!</h3>
         <p>Posto #{{ pendingBooking.seat_id }} - Scansiona il QR code per confermare.</p>
         <button @click="startScanner" class="primary">Fai Check-in con QR Code</button>
-        <div v-if="showScanner" id="qr-reader" style="margin-top: 10px;"></div>
+        <div v-if="showScanner">
+          <div id="qr-reader" style="margin-top: 10px;"></div>
+        </div>
+    </div>
+
+    <!-- Seat Suggestions Section -->
+    <div class="dashboard" v-if="suggestions.length > 0" style="margin-top: 12px; background: #f0f8ff; border-left: 4px solid #0b5ed7;">
+      <h3 style="margin-top: 0; color: #0b5ed7;">💡 Posti Consigliati</h3>
+      <p style="font-size: 14px; color: #666; margin: 0 0 10px 0;">
+        Basato su occupazione storica, comfort ambientale e efficienza energetica
+      </p>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <div v-for="(sugg, idx) in suggestions.slice(0, 5)" :key="'sugg-'+idx"
+             style="flex: 0 0 calc(20% - 8px); min-width: 120px; padding: 10px; background: white; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); text-align: center;">
+          <div style="font-size: 14px; font-weight: bold; color: #0b5ed7; margin-bottom: 4px;">Posto #{{ sugg.seat_id }}</div>
+          <div style="font-size: 12px; color: #28a745; margin-bottom: 6px;">Score: {{ (sugg.score * 100).toFixed(0) }}%</div>
+          <!-- <button @click="suggestedBooking(sugg.seat_id)" class="primary" style="width: 100%; font-size: 12px; padding: 4px;">
+            Prenota
+          </button> -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Booking modal -->
+    <div v-if="showBookingModal" class="modal-overlay">
+      <div class="modal">
+        <h3>Prenota posto #{{ bookingSeat ? bookingSeat.seat_id : '' }}</h3>
+        <div style="display:flex; gap:8px; align-items:center; margin:8px 0">
+          <label>Inizio:
+            <input type="datetime-local" v-model="bookingStart" />
+          </label>
+          <label>Fine:
+            <input type="datetime-local" v-model="bookingEnd" />
+          </label>
+        </div>
+        <div style="color:red; min-height:18px">{{ bookingError }}</div>
+        <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:10px">
+          <button @click="closeBookingModal">Annulla</button>
+          <button class="primary" @click="createBooking">Conferma prenotazione</button>
+        </div>
+      </div>
     </div>
 
 
-    <div v-if="gridRows.length === 0">Caricamento posti…</div>
+    <div v-if="seats.length === 0">Caricamento posti…</div>
 
-    <div class="tables-area" v-else>
-      <div class="table-circle" v-for="(row, rIdx) in gridRows" :key="'table-'+rIdx">
-        <div class="table-surface" :title="'Tavolo ' + (rIdx + 1)"></div>
-        <div class="seats-wrapper">
-          <div
-            v-for="(seat, sIdx) in row"
-            :key="seatKey(seat, rIdx*5 + sIdx)"
-            class="seat"
-            :class="seatClass(seat)"
-            @click="onSeatClick(seat)"
-            :title="seatTitle(seat)"
-          >
-            {{ seatLabel(seat) }}
+    <div v-else>
+      <div class="room-section" v-for="roomGroup in groupedRooms" :key="'room-'+(roomGroup.room.id || roomGroup.room.name)">
+        <h3 style="margin:6px 0">{{ roomGroup.room.name }}</h3>
+        <div class="tables-area">
+          <div class="table-circle" v-for="(row, rIdx) in roomGroup.rows" :key="'table-'+roomGroup.room.id+'-'+rIdx">
+            <div class="table-surface" :title="'Tavolo ' + (rIdx + 1)"></div>
+            <div class="seats-wrapper">
+              <div
+                v-for="(seat, sIdx) in row"
+                :key="seatKey(seat, rIdx*5 + sIdx)"
+                class="seat"
+                :class="seatClass(seat)"
+                @click="onSeatClick(seat)"
+                :title="seatTitle(seat)"
+              >
+                {{ seatLabel(seat) }}
+              </div>
+            </div>
           </div>
         </div>
+        <div class="room-divider" aria-hidden="true"></div>
       </div>
     </div>
 
@@ -100,11 +159,21 @@
       data() {
         return {
           seats: [],
+          rooms: [],
+          suggestions: [],
           pollIntervalSec: 30,
           pollTimer: null,
           userBookings: [],
           showScanner: false,
-          html5QrcodeScanner: null
+          html5QrcodeScanner: null,
+          username: '',
+          userRole: '',
+          // Booking modal state
+          showBookingModal: false,
+          bookingSeat: null,
+          bookingStart: null, // datetime-local string
+          bookingEnd: null,
+          bookingError: ''
         };
       },
       computed: {
@@ -124,15 +193,35 @@
         },
         pendingBooking() {
             return this.userBookings.find(b => b.status === 'pending_checkin');
+        },
+        groupedRooms() {
+          // Group seats by room_id and chunk into rows of 5
+          const map = new Map();
+          for (const seat of this.seats) {
+            const rid = seat.room_id || 0;
+            if (!map.has(rid)) map.set(rid, []);
+            map.get(rid).push(seat);
+          }
+          const result = [];
+          for (const [rid, seats] of map.entries()) {
+            const perRow = 5;
+            const rows = [];
+            for (let i = 0; i < seats.length; i += perRow) rows.push(seats.slice(i, i + perRow));
+            const room = this.rooms.find(r => r.id === Number(rid)) || { id: rid, name: rid ? `Room ${rid}` : 'Unassigned' };
+            result.push({ room, rows });
+          }
+          // Sort by room id for stable ordering (Unassigned will be first)
+          result.sort((a, b) => (Number(a.room.id) || 0) - (Number(b.room.id) || 0));
+          return result;
         }
       },
       methods: {
         seatKey(seat, rIdx) {
-          if (seat.id) return `id-${seat.id}`;
+          if (seat.seat_id) return `id-${seat.seat_id}`;
           return `id-${rIdx}`;
         },
         seatLabel(seat) {
-          if (seat.id !== undefined) return `#${seat.id}`;
+          if (seat.seat_id !== undefined) return `#${seat.seat_id}`;
           return '?';
         },
         seatClass(seat) {
@@ -148,7 +237,7 @@
           return 'Libero';
         },
         
-        async onSeatClick(seat) {
+        onSeatClick(seat) {
             if (seat.is_occupied) {
                 alert("Questo posto è occupato (rilevato dal sensore).");
                 return;
@@ -162,26 +251,105 @@
                 return;
             }
 
-            if (!confirm(`Vuoi prenotare il posto #${seat.id}?`)) return;
-
-            try {
-                const response = await this.authFetch('/bookings/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ seat_id: seat.id })
-                });
-                if (!response.ok) {
-                    const err = await response.json().catch(()=>({}));
-                    throw new Error(err.message || 'Errore nella creazione della prenotazione');
-                }
-                alert('Prenotazione creata. Ora effettua il check-in scansionando il QR code sul posto.');
-                await this.fetchUserBookings();
-                await this.fetchSeats();
-            } catch (err) {
-                console.error('Booking error', err);
-                alert(err.message || 'Errore durante la creazione della prenotazione.');
-            }
+            // Apri il modal di prenotazione con valori di default
+            this.openBookingModal(seat);
         },
+
+        openBookingModal(seat) {
+          this.bookingSeat = seat;
+          this.bookingError = '';
+          const { start, end } = this.getDefaultBookingTimes();
+          // datetime-local expects 'YYYY-MM-DDTHH:MM'
+          this.bookingStart = start;
+          this.bookingEnd = end;
+          this.showBookingModal = true;
+        },
+
+        closeBookingModal() {
+          this.showBookingModal = false;
+          this.bookingSeat = null;
+          this.bookingStart = null;
+          this.bookingEnd = null;
+          this.bookingError = '';
+        },
+
+        // Format a 'YYYY-MM-DDTHH:MM' into an ISO string with local offset, e.g. 2026-01-02T14:30:00+01:00
+        formatLocalToIsoWithOffset(localStr) {
+          if (!localStr) return null;
+          const withSeconds = localStr.length === 16 ? `${localStr}:00` : localStr; // add :00 if missing seconds
+          // compute offset
+          const offsetMin = -new Date().getTimezoneOffset();
+          const sign = offsetMin >= 0 ? '+' : '-';
+          const absMin = Math.abs(offsetMin);
+          const hh = String(Math.floor(absMin / 60)).padStart(2, '0');
+          const mm = String(absMin % 60).padStart(2, '0');
+          return `${withSeconds}${sign}${hh}:${mm}`;
+        },
+
+        getDefaultBookingTimes() {
+          const now = new Date();
+          // round up to next 30 minutes
+          const min = now.getMinutes();
+          const add = min === 0 || min <= 30 ? (min <= 30 ? (30 - min) : 60 - min) : 60 - min;
+          const start = new Date(now.getTime() + add * 60 * 1000);
+          const end = new Date(start.getTime() + 60 * 60 * 1000); // +1h
+
+          function toLocalDatetimeInput(d) {
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            const hh = String(d.getHours()).padStart(2, '0');
+            const min = String(d.getMinutes()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+          }
+
+          return { start: toLocalDatetimeInput(start), end: toLocalDatetimeInput(end) };
+        },
+
+        async createBooking() {
+          if (!this.bookingSeat) return;
+          if (!this.bookingStart || !this.bookingEnd) {
+            this.bookingError = 'Inserisci inizio e fine prenotazione';
+            return;
+          }
+
+          // Build ISO strings with offset (compatible con datetime.fromisoformat)
+          const startIso = this.formatLocalToIsoWithOffset(this.bookingStart);
+          const endIso = this.formatLocalToIsoWithOffset(this.bookingEnd);
+
+          // Basic validation
+          if (startIso >= endIso) {
+            this.bookingError = 'Intervallo non valido (start >= end)';
+            return;
+          }
+
+          try {
+            const payload = {
+              seat_id: this.bookingSeat.seat_id,
+              start_time: startIso,
+              end_time: endIso
+            };
+            const response = await this.authFetch('/bookings/', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            if (!response.ok) {
+              const err = await response.json().catch(()=>({}));
+              this.bookingError = err.message || (err.error || 'Errore nella creazione della prenotazione');
+              return;
+            }
+            // Success
+            this.closeBookingModal();
+            alert('Prenotazione creata. Ora effettua il check-in scansionando il QR code sul posto.');
+            await this.fetchUserBookings();
+            await this.fetchSeats();
+          } catch (err) {
+            console.error('createBooking error', err);
+            this.bookingError = err.message || 'Errore durante la creazione della prenotazione.';
+          }
+        },
+
 
         async fetchUserBookings() {
             try {
@@ -193,13 +361,44 @@
             }
         },
 
+        async fetchSuggestions() {
+            try {
+                const res = await this.authFetch('/seat-suggestions');
+                if (!res.ok) {
+                    console.error('fetchSuggestions error');
+                    return;
+                }
+                this.suggestions = await res.json();
+            } catch (err) {
+                console.error('fetchSuggestions failed', err);
+            }
+        },
+
+        async fetchRooms() {
+          try {
+            const res = await this.authFetch('/rooms');
+            if (!res.ok) {
+              console.error('fetchRooms error');
+              return;
+            }
+            this.rooms = await res.json();
+          } catch (err) {
+            console.error('fetchRooms failed', err);
+          }
+        },
+
         startScanner() {
             this.showScanner = !this.showScanner;
             if (this.showScanner) {
               this.$nextTick(() => {
-                  this.html5QrcodeScanner = new Html5Qrcode("qr-reader");
+                          this.html5QrcodeScanner = new Html5Qrcode("qr-reader");
                   const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-                  this.html5QrcodeScanner.start({ facingMode: "environment" }, config, this.onScanSuccess);
+                  // add error callback to surface scan issues
+                  this.html5QrcodeScanner.start({ facingMode: "environment" }, config, this.onScanSuccess, (err) => {
+                      // console.warn('QR scan error', err);
+                      // this.scannerError = (err && err.msg) ? err.msg : String(err);
+                      // setTimeout(() => this.scannerError = '', 4000);
+                  });
               });
             }
         },
@@ -209,6 +408,7 @@
                 this.html5QrcodeScanner.stop().then(() => {
                     this.showScanner = false;
                     this.html5QrcodeScanner = null;
+                    // this.scannerError = '';
                     this.performCheckIn(decodedText);
                 }).catch(err => console.error("Error stopping scanner", err));
             }
@@ -223,7 +423,7 @@
                 });
                  if (!response.ok) {
                     const err = await response.json().catch(()=>({}));
-                    throw new Error(err.message || 'Errore durante il check-in');
+                    throw new Error(err.error || 'Errore durante il check-in');
                 }
                 alert('Check-in effettuato con successo!');
                 await this.fetchUserBookings();
@@ -292,8 +492,12 @@
           window.location.href = './login';
         } else {
           this.username = localStorage.getItem('iot_username') || '';
+          this.userRole = localStorage.getItem('iot_user_role') || 'student';
+          // Load rooms first (so names are available when seats arrive)
+          this.fetchRooms();
           this.fetchSeats();
           this.fetchUserBookings();
+          this.fetchSuggestions();
         }
       },
       mounted() {

@@ -19,7 +19,7 @@ def login():
         user = User.query.filter_by(username=username).first()
         if user and check_password_hash(user.password, password):
             token = generate_token(identity=user.username)
-            return jsonify({"access_token": token}), 200
+            return jsonify({"access_token": token, "role": user.role}), 200
 
         return jsonify({"message": "Credenziali non valide"}), 401
     except Exception as e:

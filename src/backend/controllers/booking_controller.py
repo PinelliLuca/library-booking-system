@@ -13,7 +13,7 @@ from src.backend.models.seat import Seat
 
 booking_bp = Blueprint("bookings", __name__, description="Booking management")
 
-@booking_bp.route("/bookings")
+@booking_bp.route("/bookings", strict_slashes=False)
 class BookingList(MethodView):
 
     @jwt_required()
@@ -26,7 +26,7 @@ class BookingList(MethodView):
             if not user:
                 return {"error": "User not found"}, 404
 
-            now = datetime.datetime.now(datetime.timezone.utc)
+            now = datetime.datetime.now()
 
             bookings = Booking.query.filter(
                 Booking.user_id == user.id,
@@ -44,7 +44,7 @@ class BookingList(MethodView):
                     "seat_id": b.seat_id,
                     "start_time": b.start_time.isoformat(),
                     "end_time": b.end_time.isoformat(),
-                    "status": b.status.value
+                    "status": b.status
                 }
                 for b in bookings
             ], 200
@@ -119,13 +119,22 @@ class BookingCheckIn(MethodView):
 
     @jwt_required()
     def post(self):
-        """Confirm booking via physical presence"""
+        """Confirm booking via physical presence
+        Accepts either `seat_id` (int) or `seat_identifier` (string UUID from QR code).
+        """
         try:
             data = request.get_json()
             seat_id = data.get("seat_id")
+            seat_identifier = data.get("seat_identifier")
+
+            # resolve seat_identifier to seat_id if needed
+            if not seat_id and seat_identifier:
+                seat = Seat.query.filter_by(seat_identifier=seat_identifier).first()
+                if seat:
+                    seat_id = seat.id
 
             if not seat_id:
-                return {"error": "Missing seat_id"}, 400
+                return {"error": "Missing seat_id or seat_identifier"}, 400
 
             username = get_jwt_identity()
             user = User.query.filter_by(username=username).first()
@@ -133,7 +142,7 @@ class BookingCheckIn(MethodView):
             if not user:
                 return {"error": "User not found"}, 404
 
-            now = datetime.datetime.now(datetime.timezone.utc)
+            now = datetime.datetime.now()
 
             booking = Booking.query.filter(
                 Booking.user_id == user.id,
