@@ -38,12 +38,12 @@ def register():
 
         db.session.add(user)
         db.session.commit()
- #       try:
- #           send_email(subject="Registrazione completata",
- #               body=f"Ciao {user.first_name}, la tua registrazione è avvenuta con successo!",
- #               recipients=[user.email])
- #       except Exception as e:
- #           raise
+        try:
+            send_email(subject="Registrazione completata",
+                body=f"Ciao {user.first_name}, la tua registrazione è avvenuta con successo!",
+                recipients=[user.email])
+        except Exception:
+            raise
         return {
             "message": "User registered successfully",
             "user_id": user.id
