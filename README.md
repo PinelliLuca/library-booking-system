@@ -171,14 +171,47 @@ pip install -r requirements.txt
 python -m src.main
 ```
 
-## 4️⃣ Utility script: populate_seats.py
+## 4️⃣ Utility scripts
+
+### populate_seats.py
 Il file `src/backend/service/populate_seats.py` è uno script di utilità che crea alcune stanze di esempio e popola i posti nel database per scopi di sviluppo e demo. Esegui lo script con l'ambiente attivo (ad es. `python -m src.backend.service.populate_seats`) per aggiungere stanze/posti se non sono già presenti.
 
 ```bash
 python -m src.backend.service.populate_seats
 ```
 
-## 4️⃣ Accedere al front-end
+### test_suggestions.py
+Uno script utility per popolare il database con dati di test e invocare l'endpoint di generazione suggerimenti.
+
+#### Primo utilizzo (setup dei mock data)
+```bash
+python test_suggestions.py setup
+```
+Questo creerà:
+- 1 utente di test
+- 90 giorni di prenotazioni storiche (per pattern realistici)
+- Letture di temperatura (ultimi 30 giorni)
+- Stati energetici delle stanze
+
+#### Generazione suggerimenti (ripetibile)
+```bash
+python test_suggestions.py generate
+```
+Chiama l'endpoint POST `/seat-suggestions/generate` e visualizza i suggerimenti calcolati.
+
+#### Workflow completo (setup + generate)
+```bash
+python test_suggestions.py
+```
+
+**Nota:** L'endpoint `/seat-suggestions/generate` è anche disponibile via API HTTP con JWT token:
+```bash
+curl -X POST http://localhost:5000/seat-suggestions/generate \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json"
+```
+
+## 5️⃣ Accedere al front-end
 Per accedere all'applicativo, accedere al browser e digitare `http://localhost:5000/frontend/login` per iniziare.
 
 ---

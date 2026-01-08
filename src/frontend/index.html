@@ -73,8 +73,25 @@
         <button @click="startScanner" class="primary">Fai Check-in con QR Code</button>
         <div v-if="showScanner">
           <div id="qr-reader" style="margin-top: 10px;"></div>
-          <!-- <div v-if="scannerError" style="color:red;margin-top:6px">{{ scannerError }}</div> -->
         </div>
+    </div>
+
+    <!-- Seat Suggestions Section -->
+    <div class="dashboard" v-if="suggestions.length > 0" style="margin-top: 12px; background: #f0f8ff; border-left: 4px solid #0b5ed7;">
+      <h3 style="margin-top: 0; color: #0b5ed7;">💡 Posti Consigliati</h3>
+      <p style="font-size: 14px; color: #666; margin: 0 0 10px 0;">
+        Basato su occupazione storica, comfort ambientale e efficienza energetica
+      </p>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <div v-for="(sugg, idx) in suggestions.slice(0, 5)" :key="'sugg-'+idx"
+             style="flex: 0 0 calc(20% - 8px); min-width: 120px; padding: 10px; background: white; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); text-align: center;">
+          <div style="font-size: 14px; font-weight: bold; color: #0b5ed7; margin-bottom: 4px;">Posto #{{ sugg.seat_id }}</div>
+          <div style="font-size: 12px; color: #28a745; margin-bottom: 6px;">Score: {{ (sugg.score * 100).toFixed(0) }}%</div>
+          <!-- <button @click="suggestedBooking(sugg.seat_id)" class="primary" style="width: 100%; font-size: 12px; padding: 4px;">
+            Prenota
+          </button> -->
+        </div>
+      </div>
     </div>
 
     <!-- Booking modal -->
@@ -143,6 +160,7 @@
         return {
           seats: [],
           rooms: [],
+          suggestions: [],
           pollIntervalSec: 30,
           pollTimer: null,
           userBookings: [],
@@ -150,7 +168,6 @@
           html5QrcodeScanner: null,
           username: '',
           userRole: '',
-          // scannerError: '',
           // Booking modal state
           showBookingModal: false,
           bookingSeat: null,
@@ -344,6 +361,19 @@
             }
         },
 
+        async fetchSuggestions() {
+            try {
+                const res = await this.authFetch('/seat-suggestions');
+                if (!res.ok) {
+                    console.error('fetchSuggestions error');
+                    return;
+                }
+                this.suggestions = await res.json();
+            } catch (err) {
+                console.error('fetchSuggestions failed', err);
+            }
+        },
+
         async fetchRooms() {
           try {
             const res = await this.authFetch('/rooms');
@@ -467,6 +497,7 @@
           this.fetchRooms();
           this.fetchSeats();
           this.fetchUserBookings();
+          this.fetchSuggestions();
         }
       },
       mounted() {
