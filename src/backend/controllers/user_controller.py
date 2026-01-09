@@ -4,6 +4,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from flask_jwt_extended import create_access_token
 
 from src.backend.common.extensions import db
+from src.backend.common.labels import BODY_USER_REGISTRATION
 from src.backend.models.user import User
 from src.backend.notification.mail import send_email
 
@@ -40,7 +41,8 @@ def register():
         db.session.commit()
         try:
             send_email(subject="Registrazione completata",
-                body=f"Ciao {user.first_name}, la tua registrazione è avvenuta con successo!",
+                #body=f"Ciao {user.first_name}, la tua registrazione è avvenuta con successo!",
+                body=BODY_USER_REGISTRATION.format(first_name=user.first_name),
                 recipients=[user.email])
         except Exception:
             raise

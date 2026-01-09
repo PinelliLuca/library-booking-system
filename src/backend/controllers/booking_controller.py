@@ -5,10 +5,13 @@ from flask_smorest import Blueprint
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy.exc import SQLAlchemyError
 
+from src.backend.auth.admin_required import admin_required
 from src.backend.common.extensions import db
+from src.backend.common.labels import BOOKING_FORCE_MOVE_BODY
 from src.backend.models.booking import Booking, BookingStatus
 from src.backend.models.user import User
 from src.backend.models.seat import Seat
+from src.backend.notification.mail import send_email
 
 booking_bp = Blueprint("bookings", __name__, description="Booking management")
 
@@ -158,6 +161,53 @@ class BookingCheckIn(MethodView):
             db.session.commit()
 
             return {"message": "Check-in successful"}, 200
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            return {"error": "Database error", "details": str(e)}, 500
+@booking_bp.route("/bookings/force-move")
+class BookingForceMove(MethodView):
+
+    #@admin_required
+    def post(self):
+        """
+        Forza lo spostamento di una prenotazione su un altro posto
+        """
+        try:
+            data = request.get_json()
+            booking_id = data.get("booking_id")
+            new_seat_id = data.get("new_seat_id")
+            reason = data.get("reason")
+
+            if not all([booking_id, new_seat_id, reason]):
+                return {"error": "Missing required fields"}, 400
+
+            booking = Booking.query.get(booking_id)
+            if not booking:
+                return {"error": "Booking not found"}, 404
+
+            old_seat_id = booking.seat_id
+            booking.seat_id = new_seat_id
+
+            db.session.commit()
+
+            # invio email
+            user = booking.user
+            send_email(
+                subject="Spostamento prenotazione",
+                body=BOOKING_FORCE_MOVE_BODY.format(
+                    old_seat=old_seat_id,
+                    new_seat=new_seat_id,
+                    reason=reason
+                ),
+                recipients=[user.email]
+            )
+
+            return {
+                "message": "Booking moved successfully",
+                "old_seat_id": old_seat_id,
+                "new_seat_id": new_seat_id
+            }, 200
 
         except SQLAlchemyError as e:
             db.session.rollback()
