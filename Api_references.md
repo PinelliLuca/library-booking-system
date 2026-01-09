@@ -301,3 +301,88 @@ Restituisce i posti suggeriti in base a comfort, occupazione e consumo energetic
 - Il backend agisce come Digital Twin centrale
 
 ---
+
+## 🔄 Nuovi endpoint per Seat Suggestions (estensioni)
+
+### 🔹 Generate con opzioni (aggiornamento)
+
+**POST** `/seat-suggestions/generate`
+
+**Input JSON (opzionale)**
+```json
+{
+  "date": "2026-01-15",    // YYYY-MM-DD, opzionale (default: today)
+  "hour": 10,               // 0-23, opzionale (default: current hour)
+  "history_days": 90,       // intero, opzionale (default: 90)
+  "top_n": 10               // quanti vengono marcati come consigliati
+}
+```
+
+**Output JSON**
+```json
+[
+  { "seat_id": 5, "score": 0.82, "reason": "...", "is_recommended": true },
+  ...
+]
+```
+
+**Descrizione**  
+Genera suggerimenti per la data/ora specificata (default: oggi/ora corrente), salva le raccomandazioni nel DB e marca i primi `top_n` risultati con `is_recommended=true`.
+
+---
+
+### 🔹 Get suggestions per data
+
+**GET** `/seat-suggestions?date=YYYY-MM-DD&top=10`
+
+**Output JSON**
+```json
+[
+  { "seat_id": 5, "score": 0.82, "reason": "...", "is_recommended": true },
+  ...
+]
+```
+
+**Descrizione**  
+Recupera le suggerimenti calcolati per la data indicata (o le ultime se non fornita). Parametro `top` facoltativo per limitare la risposta.
+
+---
+
+### 🔹 Recompute (admin)
+
+**POST** `/seat-suggestions/recompute`
+
+**Input JSON** (opzionale: vedi `/generate`)
+
+**Output JSON**
+```json
+{ "message": "Recompute triggered", "generated": 120 }
+```
+
+**Descrizione**  
+Endpoint protetto per forzare il ricalcolo globale delle raccomandazioni (richiede ruolo admin/staff). Può essere chiamato dal backend (job schedulato) o manualmente dall'admin.
+
+---
+
+### 🔹 Explain score
+
+**GET** `/seat-suggestions/<seat_id>/explain?date=YYYY-MM-DD&hour=10`
+
+**Output JSON**
+```json
+{
+  "seat_id": 5,
+  "date": "2026-01-15",
+  "hour": 10,
+  "occupancy_probability": 0.62,
+  "comfort_score": 0.71,
+  "energy_cost": 0.20,
+  "final_score": 0.48,
+  "reason": "Stanza già attiva, buona probabilità e comfort adeguato"
+}
+```
+
+**Descrizione**  
+Fornisce la spiegazione dettagliata dello score per un singolo posto, utile per la trasparenza delle raccomandazioni.
+
+---

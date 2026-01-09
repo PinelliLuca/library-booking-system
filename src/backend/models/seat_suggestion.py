@@ -8,7 +8,7 @@ class SeatSuggestion(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     seat_id = db.Column(db.Integer, db.ForeignKey("seats.id"))
     date = db.Column(db.Date)
-
+    is_recommended = db.Column(db.Boolean, default=False)
     score = db.Column(db.Float)
     reason = db.Column(db.String(255))
 
