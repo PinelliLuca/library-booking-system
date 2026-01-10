@@ -304,63 +304,77 @@ Restituisce i posti suggeriti in base a comfort, occupazione e consumo energetic
 
 ## 🔄 Nuovi endpoint per Seat Suggestions (estensioni)
 
-### 🔹 Generate con opzioni (aggiornamento)
+### 🔹 Generate suggestions
 
 **POST** `/seat-suggestions/generate`
 
 **Input JSON (opzionale)**
 ```json
 {
-  "date": "2026-01-15",    // YYYY-MM-DD, opzionale (default: today)
-  "hour": 10,               // 0-23, opzionale (default: current hour)
-  "history_days": 90,       // intero, opzionale (default: 90)
-  "top_n": 10               // quanti vengono marcati come consigliati
+  "date": "2026-01-15",
+  "hour": 10,
+  "history_days": 90,
+  "top_n": 10
 }
 ```
 
 **Output JSON**
 ```json
 [
-  { "seat_id": 5, "score": 0.82, "reason": "...", "is_recommended": true },
-  ...
+  {
+    "seat_id": 5,
+    "score": 0.82,
+    "reason": "occ=0.62,comfort=0.71,energy=0.20",
+    "is_recommended": true
+  }
 ]
 ```
 
 **Descrizione**  
-Genera suggerimenti per la data/ora specificata (default: oggi/ora corrente), salva le raccomandazioni nel DB e marca i primi `top_n` risultati con `is_recommended=true`.
+Calcola i suggerimenti per la data/ora indicata (default: now), salva i risultati a DB e marca i migliori `top_n` con `is_recommended=true`.
 
 ---
 
-### 🔹 Get suggestions per data
+### 🔹 Get suggestions
 
 **GET** `/seat-suggestions?date=YYYY-MM-DD&top=10`
 
 **Output JSON**
 ```json
 [
-  { "seat_id": 5, "score": 0.82, "reason": "...", "is_recommended": true },
-  ...
+  {
+    "seat_id": 5,
+    "score": 0.82,
+    "reason": "occ=0.62,comfort=0.71,energy=0.20",
+    "is_recommended": true
+  }
 ]
 ```
 
 **Descrizione**  
-Recupera le suggerimenti calcolati per la data indicata (o le ultime se non fornita). Parametro `top` facoltativo per limitare la risposta.
+Recupera i suggerimenti già calcolati per una data specifica. Se `date` non è fornita, restituisce l’ultimo calcolo disponibile.
 
 ---
 
-### 🔹 Recompute (admin)
+### 🔹 Recompute suggestions (admin)
 
 **POST** `/seat-suggestions/recompute`
 
-**Input JSON** (opzionale: vedi `/generate`)
+**Input JSON** (opzionale, come `/generate`)
 
 **Output JSON**
 ```json
-{ "message": "Recompute triggered", "generated": 120 }
+{
+  "message": "Recompute triggered",
+  "generated": 120
+}
 ```
 
 **Descrizione**  
-Endpoint protetto per forzare il ricalcolo globale delle raccomandazioni (richiede ruolo admin/staff). Può essere chiamato dal backend (job schedulato) o manualmente dall'admin.
+Forza il ricalcolo globale delle seat suggestions. Pensato per:
+- admin
+- job schedulati
+- dimostrazione in tempo reale
 
 ---
 
@@ -378,11 +392,108 @@ Endpoint protetto per forzare il ricalcolo globale delle raccomandazioni (richie
   "comfort_score": 0.71,
   "energy_cost": 0.20,
   "final_score": 0.48,
-  "reason": "Stanza già attiva, buona probabilità e comfort adeguato"
+  "reason": "occ=0.62,comfort=0.71,energy=0.20"
 }
 ```
 
 **Descrizione**  
-Fornisce la spiegazione dettagliata dello score per un singolo posto, utile per la trasparenza delle raccomandazioni.
+Espone in modo trasparente tutti i fattori che contribuiscono allo score di un posto. Endpoint chiave per la spiegazione all’esame.
 
 ---
+
+## 🎭 Demo Endpoints (per esame)
+
+Questi endpoint **non sono destinati alla produzione**, ma servono a:
+- popolare il DB
+- simulare scenari
+- mostrare il comportamento AI-like del sistema
+
+---
+
+### 🔹 Clear all demo data
+
+**POST** `/demo/clear-all`
+
+**Descrizione**  
+Elimina tutti i dati di demo rispettando le foreign key.
+
+---
+
+### 🔹 Populate rooms & seats
+
+**POST** `/demo/populate-rooms-seats`
+
+**Descrizione**  
+Crea 3 stanze:
+- Cold Room (north)
+- Medium Room (east)
+- Hot Room (south)
+
+con 10 posti ciascuna.
+
+---
+
+### 🔹 Populate users
+
+**POST** `/demo/populate-users`
+
+**Input JSON**
+```json
+{ "count": 5 }
+```
+
+**Descrizione**  
+Crea utenti fittizi (studenti) per simulare prenotazioni reali.
+
+---
+
+### 🔹 Populate temperatures
+
+**POST** `/demo/populate-temperatures`
+
+**Descrizione**  
+Genera uno storico di 30 giorni di temperature coerenti con l’esposizione della stanza.
+
+---
+
+### 🔹 Populate bookings
+
+**POST** `/demo/populate-bookings`
+
+**Descrizione**  
+Crea prenotazioni storiche casuali per alimentare l’occupancy probability.
+
+---
+
+### 🔹 Set room energy state
+
+**POST** `/demo/set-room-energy`
+
+**Input JSON**
+```json
+{
+  "room_id": 1,
+  "lights_on": true,
+  "ac_on": true,
+  "target_temperature": 22
+}
+```
+
+**Descrizione**  
+Imposta manualmente lo stato energetico di una stanza (IoT simulation).
+
+---
+
+### 🔹 Run full scenario
+
+**POST** `/demo/run-scenario`
+
+**Descrizione**  
+Esegue l’intera demo in sequenza:
+1. clear DB
+2. crea stanze e posti
+3. crea utenti
+4. genera temperature
+5. genera prenotazioni
+
+Pronto per eseguire subito `/seat-suggestions/generate`.
