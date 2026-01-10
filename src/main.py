@@ -1,3 +1,4 @@
+from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask
 from flask_smorest import Api
 from src.backend.common.extensions import db, jwt, mail
@@ -17,6 +18,7 @@ from src.backend.controllers.room_controller import room_bp
 from src.backend.controllers.energy_command import energy_bp
 from src.backend.controllers.seat_suggestion import suggestion_bp
 from src.backend.controllers.temperature_readings import temperature_bp
+from src.backend.job.scheduler import close_expired_bookings
 
 # Carica variabili da .env
 load_dotenv()
@@ -62,6 +64,16 @@ db.init_app(app)
 api = Api(app)
 jwt.init_app(app)
 mail.init_app(app)
+def start_scheduler(app):
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(
+        func=lambda: app.app_context().push() or close_expired_bookings(),
+        trigger="interval",
+        minutes=1,
+        id="booking_monitor"
+    )
+    scheduler.start()
+
 # Gestione delle eccezioni HTTP
 @app.errorhandler(HTTPException)
 def handle_http_exception(e):
