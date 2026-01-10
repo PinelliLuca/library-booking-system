@@ -7,7 +7,7 @@ from src.backend.models import Room, Seat, TemperatureReading, Booking, SeatSugg
 from src.backend.models.booking import BookingStatus
 from src.backend.service.generate_suggestion_service import _generate_suggestions_service
 from src.backend.common.logger import logger
-demo_bp = Blueprint("demo", __name__, description="Demo utilities for exam and system showcase")
+demo_bp = Blueprint("demo", __name__)
 
 # CLEAR ALL
 
