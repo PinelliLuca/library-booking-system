@@ -1,0 +1,125 @@
+import argparse
+import json
+import time
+from typing import Optional
+
+import requests
+import serial
+from serial.tools import list_ports
+
+
+def find_arduino_port() -> Optional[str]:
+    """
+    Prova a trovare automaticamente una porta Arduino su Windows.
+    Restituisce una stringa tipo 'COM3' oppure None se non trovata.
+    """
+    ports = list(list_ports.comports())
+    if not ports:
+        return None
+
+    # Heuristics: Arduino/USB Serial/CH340/FTDI ecc.
+    keywords = ["Arduino", "CH340", "USB-SERIAL", "USB Serial", "FTDI", "Silicon Labs", "CP210"]
+    for p in ports:
+        desc = (p.description or "").lower()
+        manu = (p.manufacturer or "").lower()
+        hwid = (p.hwid or "").lower()
+        if any(k.lower() in desc for k in keywords) or any(k.lower() in manu for k in keywords) or any(k.lower() in hwid for k in keywords):
+            return p.device  # es. 'COM3'
+
+    # fallback: se c'è solo una COM disponibile, prova quella
+    if len(ports) == 1:
+        return ports[0].device
+
+    return None
+
+
+def is_probably_json_line(s: str) -> bool:
+    s = s.strip()
+    return s.startswith("{") and s.endswith("}")
+
+
+def open_serial(port: str, baud: int) -> serial.Serial:
+    # timeout breve: così il loop resta reattivo
+    ser = serial.Serial(port=port, baudrate=baud, timeout=1)
+    # Arduino spesso resetta all'apertura della seriale: aspetta un attimo
+    time.sleep(2)
+    return ser
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Bridge: Arduino Serial -> HTTP Backend (Windows)")
+    parser.add_argument("--port", default="", help="Porta seriale (es. COM3). Se vuota, prova auto-detect.")
+    parser.add_argument("--baud", type=int, default=9600, help="Baud rate Arduino (default 9600)")
+    parser.add_argument("--backend", default="http://localhost:5000", help="Base URL backend (es. http://192.168.1.50:5000)")
+    parser.add_argument("--endpoint", default="/seat-occupancy", help="Endpoint (default /seat-occupancy)")
+    parser.add_argument("--token", default="", help="JWT token (se richiesto). Se vuoto, nessun header Authorization.")
+    parser.add_argument("--verbose", action="store_true", help="Stampa anche righe non-JSON (debug).")
+    args = parser.parse_args()
+
+    headers = {"Authorization": f"Bearer {args.token}"} if args.token else {}
+
+    port = args.port.strip()
+    if not port:
+        port = find_arduino_port() or ""
+    if not port:
+        print("[bridge] ERROR: Porta non trovata. Specifica --port COMx oppure identifica la COM con i passi sotto.")
+        raise SystemExit(2)
+
+    url = f"{args.backend.rstrip('/')}{args.endpoint}"
+
+    print(f"[bridge] Using serial: {port} @ {args.baud}")
+    print(f"[bridge] Forwarding to: {url}")
+    if not args.token:
+        print("[bridge] NOTE: token vuoto -> se il backend richiede auth, potresti vedere 401/403")
+
+    ser = None
+
+    while True:
+        try:
+            if ser is None or not ser.is_open:
+                ser = open_serial(port, args.baud)
+                print("[bridge] Serial connected.")
+
+            raw = ser.readline().decode("utf-8", errors="ignore").strip()
+            if not raw:
+                continue
+
+            if not is_probably_json_line(raw):
+                if args.verbose:
+                    print(f"[bridge] (skip) {raw}")
+                continue
+
+            try:
+                data = json.loads(raw)
+            except json.JSONDecodeError:
+                if args.verbose:
+                    print(f"[bridge] (bad json) {raw}")
+                continue
+
+            # Accetta SOLO il formato che ci interessa:
+            # {"device_id": 12, "is_occupied": true/false}
+            if not isinstance(data, dict) or "device_id" not in data or "is_occupied" not in data:
+                if args.verbose:
+                    print(f"[bridge] (skip schema) {data}")
+                continue
+
+            try:
+                r = requests.post(url, json=data, headers=headers, timeout=3)
+                print(f"[bridge] {r.status_code} -> {data}")
+            except requests.RequestException as e:
+                print(f"[bridge] HTTP error: {e.__class__.__name__}: {e} | data={data}")
+
+        except (serial.SerialException, OSError) as e:
+            # Tipico: Arduino scollegato/reset, COM occupata, ecc.
+            print(f"[bridge] Serial error: {e}. Reconnecting in 2s...")
+            try:
+                if ser is not None:
+                    ser.close()
+            except Exception:
+                pass
+            ser = None
+            time.sleep(2)
+
+
+if __name__ == "__main__":
+    main()
