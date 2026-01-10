@@ -26,8 +26,8 @@ def register():
         if User.query.filter_by(username=username).first():
             return {"error": "Username already exists"}, 409
 
-        if User.query.filter_by(email=email).first():
-            return {"error": "Email already exists"}, 409
+        #if User.query.filter_by(email=email).first():
+        #    return {"error": "Email already exists"}, 409
 
         user = User(
             username=username,

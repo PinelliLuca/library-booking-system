@@ -20,7 +20,5 @@ class SeatOccupancyReading(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     device_id = db.Column(db.Integer, db.ForeignKey("devices.id"))
 
-    weight_detected = db.Column(db.Boolean)
-    proximity_detected = db.Column(db.Boolean)
 
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
