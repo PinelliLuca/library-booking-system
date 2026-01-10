@@ -15,3 +15,19 @@ SEAT_RELEASED_BODY = (
     "Il posto {seat_id} è stato liberato automaticamente per inattività.\n"
     "Se ritieni ci sia un errore, contatta l'amministrazione."
 )
+EMAIL_BOOKING_COMPLETED = {
+    "subject": "Prenotazione completata",
+    "body": (
+        "La tua prenotazione per il posto {seat_id} si è conclusa correttamente.\n\n"
+        "Orario di fine prenotazione: {end_time}\n\n"
+        "Grazie per aver utilizzato il sistema di prenotazione della biblioteca."
+    )
+}
+EMAIL_FORCE_RELEASE = {
+    "subject": "Posto liberato automaticamente",
+    "body": (
+        "Il tuo posto {seat_id} è stato liberato automaticamente perché "
+        "non è stata rilevata presenza.\n\n"
+        "La prenotazione era valida fino alle {end_time}."
+    )
+}
