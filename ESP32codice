@@ -1,0 +1,156 @@
+#include <ArduinoJson.h>
+
+// ===================== PIN MAPPING =====================
+// Luci stanze
+#define ROOM1_PIN 18
+#define ROOM2_PIN 19
+#define ROOM3_PIN 23
+
+// TMP36 (solo stanza 1)
+const int ROOM1_TEMP_ADC = 34;   // GPIO34 (ADC1)
+
+// HVAC LED (solo stanza 1)
+#define HEAT_LED_PIN 25          // LED rosso
+#define COOL_LED_PIN 26          // LED azzurro
+
+// HVAC modes (evita enum nella firma: Arduino IDE non impazzisce)
+#define HVAC_OFF  0
+#define HVAC_HEAT 1
+#define HVAC_COOL 2
+
+// ===================== LUCI =====================
+void setRoomLight(int room_id, bool on) {
+  int pin = -1;
+
+  if (room_id == 1) pin = ROOM1_PIN;
+  else if (room_id == 2) pin = ROOM2_PIN;
+  else if (room_id == 3) pin = ROOM3_PIN;
+  else return;
+
+  digitalWrite(pin, on ? HIGH : LOW);
+}
+
+// ===================== HVAC =====================
+void setHvacRoom1(int mode) {
+  // Mutua esclusione
+  if (mode == HVAC_HEAT) {
+    digitalWrite(HEAT_LED_PIN, HIGH);
+    digitalWrite(COOL_LED_PIN, LOW);
+  } else if (mode == HVAC_COOL) {
+    digitalWrite(HEAT_LED_PIN, LOW);
+    digitalWrite(COOL_LED_PIN, HIGH);
+  } else { // HVAC_OFF
+    digitalWrite(HEAT_LED_PIN, LOW);
+    digitalWrite(COOL_LED_PIN, LOW);
+  }
+}
+
+// ===================== TMP36 =====================
+// lettura calibrata ESP32 (fondamentale)
+float readTMP36C_once() {
+  int mv = analogReadMilliVolts(ROOM1_TEMP_ADC); // millivolt calibrati
+  float v = mv / 1000.0f;
+  return (v - 0.5f) * 100.0f; // TMP36: 10mV/°C, offset 0.5V
+}
+
+float readTMP36C_avg(int samples = 10) {
+  float sum = 0.0f;
+  for (int i = 0; i < samples; i++) {
+    sum += readTMP36C_once();
+    delay(5);
+  }
+  return sum / samples;
+}
+
+// ===================== TELEMETRIA =====================
+unsigned long lastTempMs = 0;
+const unsigned long TEMP_PERIOD_MS = 1000;
+
+// ===================== SETUP =====================
+void setup() {
+  Serial.begin(115200);
+
+  // Luci
+  pinMode(ROOM1_PIN, OUTPUT);
+  pinMode(ROOM2_PIN, OUTPUT);
+  pinMode(ROOM3_PIN, OUTPUT);
+  digitalWrite(ROOM1_PIN, LOW);
+  digitalWrite(ROOM2_PIN, LOW);
+  digitalWrite(ROOM3_PIN, LOW);
+
+  // HVAC LED
+  pinMode(HEAT_LED_PIN, OUTPUT);
+  pinMode(COOL_LED_PIN, OUTPUT);
+  setHvacRoom1(HVAC_OFF);
+
+  // ADC TMP36
+  analogSetAttenuation(ADC_11db);
+  analogReadResolution(12);
+
+  Serial.println("ESP32 ready: LIGHTS+HVAC JSON IN, TEMP JSON OUT");
+  Serial.println("Send examples (one line each):");
+  Serial.println("{\"room_id\":1,\"lights\":true}");
+  Serial.println("{\"room_id\":2,\"lights\":false}");
+  Serial.println("{\"room_id\":1,\"hvac\":\"heat\"}");
+  Serial.println("{\"room_id\":1,\"hvac\":\"cool\"}");
+  Serial.println("{\"room_id\":1,\"hvac\":\"off\"}");
+}
+
+// ===================== LOOP =====================
+void loop() {
+  // 1) Ricezione comandi JSON (una riga = un JSON)
+  if (Serial.available()) {
+    String json = Serial.readStringUntil('\n');
+    json.trim();
+
+    if (json.length() > 0) {
+      StaticJsonDocument<256> doc;
+      DeserializationError err = deserializeJson(doc, json);
+
+      if (err) {
+        Serial.println("Invalid JSON");
+      } else {
+        int room_id = doc.containsKey("room_id") ? (int)doc["room_id"] : -1;
+
+        // --- Luci ---
+        if (doc.containsKey("lights") && room_id != -1) {
+          bool lights = doc["lights"];
+          setRoomLight(room_id, lights);
+
+          Serial.print("Room ");
+          Serial.print(room_id);
+          Serial.print(" lights ");
+          Serial.println(lights ? "ON" : "OFF");
+        }
+
+        // --- HVAC (solo stanza 1) ---
+        if (doc.containsKey("hvac") && room_id == 1) {
+          const char* hvac = doc["hvac"];
+
+          if (hvac && strcmp(hvac, "heat") == 0) {
+            setHvacRoom1(HVAC_HEAT);
+            Serial.println("Room 1 HVAC -> HEAT");
+          } else if (hvac && strcmp(hvac, "cool") == 0) {
+            setHvacRoom1(HVAC_COOL);
+            Serial.println("Room 1 HVAC -> COOL");
+          } else {
+            setHvacRoom1(HVAC_OFF);
+            Serial.println("Room 1 HVAC -> OFF");
+          }
+        }
+      }
+    }
+  }
+
+  // 2) Telemetria temperatura stanza 1 ogni 1s (JSON verso backend)
+  unsigned long now = millis();
+  if (now - lastTempMs >= TEMP_PERIOD_MS) {
+    lastTempMs = now;
+
+    float tempC = readTMP36C_avg(10);
+
+    Serial.print("{\"room_id\":1,\"temperature\":");
+    Serial.print(tempC, 1);
+    Serial.println("}");
+  }
+}
