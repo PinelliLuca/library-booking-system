@@ -7,6 +7,8 @@ from src.backend.models import Room, Seat, TemperatureReading, Booking, SeatSugg
 from src.backend.models.booking import BookingStatus
 from src.backend.service.generate_suggestion_service import _generate_suggestions_service
 from src.backend.common.logger import logger
+from src.backend.controllers.seat_suggestion import SeatSuggestionGenerate
+from werkzeug.security import generate_password_hash
 demo_bp = Blueprint("demo", __name__)
 
 # CLEAR ALL
@@ -24,7 +26,7 @@ class DemoClearAll(MethodView):
             db.session.query(RoomEnergyState).delete()
             db.session.query(Seat).delete()
             db.session.query(Room).delete()
-            db.session.query(User).filter(User.role == "student").delete()
+            db.session.query(User).delete()
             db.session.commit()
 
             return {"message": "Database cleaned"}, 200
@@ -61,8 +63,10 @@ class DemoPopulateRoomsSeats(MethodView):
                 for i in range(10):
                     seat = Seat(
                         room_id=room.id,
-                        label=f"{name[:1]}-{i+1}",
-                        is_active=True
+                        # label=f"{name[:1]}-{i+1}",
+                        is_active=True, 
+                        upd_user="demo",
+                        upd_datetime=datetime.now()
                     )
                     db.session.add(seat)
 
@@ -82,18 +86,28 @@ class DemoPopulateUsers(MethodView):
         Crea utenti fittizi per demo.
         """
         try:
-            count = request.json.get("count", 5)
+            count = 5
 
             for i in range(count):
                 user = User(
                     username=f"student{i+1}",
-                    password="demo",
+                    password=generate_password_hash("demo"),
                     first_name="Demo",
                     last_name=f"User{i+1}",
                     email=f"student{i+1}@demo.local",
                     role="student"
                 )
                 db.session.add(user)
+
+            user = User(
+                username="admin",
+                password=generate_password_hash("admin"),
+                first_name="admin",
+                last_name="admin",
+                email="admin1@demo.local",
+                role="admin"
+            )
+            db.session.add(user)
 
             db.session.commit()
             return {"created": count}, 201
@@ -198,20 +212,20 @@ class DemoSetRoomEnergy(MethodView):
             logger.exception("Failed to set room energy state")
             return {"error": "Failed to set room energy state", "details": str(e)}, 500
 # RUN FULL SCENARIO
-@demo_bp.route("/demo/run-scenario")
-class DemoRunScenario(MethodView):
-    def post(self):
-        """
-        Esegue tutta la demo in un colpo solo.
-        """
-        try:
-            DemoClearAll().post()
-            DemoPopulateRoomsSeats().post()
-            DemoPopulateUsers().post()
-            DemoPopulateTemperatures().post()
-            DemoPopulateBookings().post()
+@demo_bp.route("/demo/run-scenario", methods=["POST"])
+def run_scenario():
+    """
+    Esegue tutta la demo in un colpo solo.
+    """
+    try:
+        DemoClearAll().post()
+        DemoPopulateRoomsSeats().post()
+        DemoPopulateUsers().post()
+        DemoPopulateTemperatures().post()
+        DemoPopulateBookings().post()
+        SeatSuggestionGenerate().post()
 
-            return {"message": "Demo scenario ready"}, 200
-        except:
-            logger.exception("Failed to run scenario")
-            raise
+        return {"message": "Demo scenario ready"}, 200
+    except:
+        logger.exception("Failed to run scenario")
+        raise

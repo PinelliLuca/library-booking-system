@@ -173,35 +173,12 @@ python -m src.main
 
 ## 4️⃣ Utility scripts
 
-### populate_seats.py
-Il file `src/backend/service/populate_seats.py` è uno script di utilità che crea alcune stanze di esempio e popola i posti nel database per scopi di sviluppo e demo. Esegui lo script con l'ambiente attivo (ad es. `python -m src.backend.service.populate_seats`) per aggiungere stanze/posti se non sono già presenti.
-
-```bash
-python -m src.backend.service.populate_seats
-```
-
-### test_suggestions.py
+### scripts/run_demo.py
 Uno script utility per popolare il database con dati di test e invocare l'endpoint di generazione suggerimenti.
 
 #### Primo utilizzo (setup dei mock data)
 ```bash
-python test_suggestions.py setup
-```
-Questo creerà:
-- 1 utente di test
-- 90 giorni di prenotazioni storiche (per pattern realistici)
-- Letture di temperatura (ultimi 30 giorni)
-- Stati energetici delle stanze
-
-#### Generazione suggerimenti (ripetibile)
-```bash
-python test_suggestions.py generate
-```
-Chiama l'endpoint POST `/seat-suggestions/generate` e visualizza i suggerimenti calcolati.
-
-#### Workflow completo (setup + generate)
-```bash
-python test_suggestions.py
+python -m scripts.run_demo
 ```
 
 **Nota:** L'endpoint `/seat-suggestions/generate` è anche disponibile via API HTTP con JWT token:
