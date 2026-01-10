@@ -6,6 +6,8 @@ from datetime import timedelta
 import os
 from flask import jsonify, send_from_directory
 from werkzeug.exceptions import HTTPException
+
+from src.backend.controllers.demo import demo_bp
 from src.backend.controllers.user_controller import user_bp
 from src.backend.controllers.booking_controller import booking_bp
 from src.backend.controllers.seat_controller import seats_bp
@@ -45,6 +47,7 @@ app.register_blueprint(occupancy_bp)
 app.register_blueprint(room_bp)
 app.register_blueprint(energy_bp)
 app.register_blueprint(suggestion_bp)
+app.register_blueprint(demo_bp)
 app.register_blueprint(temperature_bp, url_prefix="/api")
 # Configurazione SQLite
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'instance')), 'iot.db')}"
