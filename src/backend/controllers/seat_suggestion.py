@@ -5,7 +5,7 @@ from datetime import datetime
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
-from src.backend.auth import admin_required
+from src.backend.auth.admin_required import admin_required
 from src.backend.auth.auth import auth_required
 from src.backend.common.extensions import db
 from src.backend.common.logger import logger
