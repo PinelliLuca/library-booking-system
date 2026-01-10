@@ -1,11 +1,16 @@
 # controllers/demo_populate.py
+import random
+
 from flask import Blueprint, jsonify, request
 from datetime import datetime, timedelta
+
+from flask.views import MethodView
 from sqlalchemy.exc import SQLAlchemyError
 from src.backend.common.extensions import db
 from src.backend.common.logger import logger
 from src.backend.models import Room, Seat, TemperatureReading, Booking, SeatSuggestion, User, RoomEnergyState
-from src.backend.service.generate_suggestion_service import generate_suggestions_service
+from src.backend.models.booking import BookingStatus
+from src.backend.service.generate_suggestion_service import _generate_suggestions_service
 demo_bp = Blueprint("demo", __name__, url_prefix="/demo")
 
 demo_bp = Blueprint("demo", __name__, description="Demo utilities for exam and system showcase")
