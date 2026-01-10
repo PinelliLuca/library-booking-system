@@ -37,7 +37,7 @@ class TemperatureIngest(MethodView):
                 hvac_action = "off"
 
             return {
-                "message": "Temperature recorded",
+                "room_id": room_id,
                 "hvac": hvac_action
             }, 201
 
