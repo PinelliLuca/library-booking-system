@@ -1,0 +1,96 @@
+import json
+import time
+import threading
+import serial
+import requests
+
+# ===== CONFIG =====
+COM_PORT = "COM5"          # <-- cambia con la tua porta
+BAUD = 115200
+
+BACKEND_BASE = "http://127.0.0.1:5000"  # <-- cambia se backend è su altra macchina
+TEMP_POST_ENDPOINT = "/temperatures"    # <-- cambia se nel vostro backend è diverso
+CMD_GET_ENDPOINT = "/esp32/commands"    # <-- endpoint da implementare/già esistente
+
+POLL_SECONDS = 1.0         # ogni quanto chiedere comandi al backend
+
+# Se backend usa auth, metti token qui (altrimenti lascia None)
+AUTH_TOKEN = None  # es. "eyJhbGciOi..."
+# ===================
+
+headers = {}
+if AUTH_TOKEN:
+    headers["Authorization"] = f"Bearer {AUTH_TOKEN}"
+
+ser = serial.Serial(COM_PORT, BAUD, timeout=1)
+time.sleep(2)
+
+print(f"[OK] Serial opened on {COM_PORT} @ {BAUD}")
+
+def send_to_esp32(obj: dict):
+    line = json.dumps(obj, separators=(",", ":")) + "\n"
+    ser.write(line.encode("utf-8"))
+    print("[TX->ESP32]", line.strip())
+
+def serial_reader():
+    while True:
+        try:
+            line = ser.readline().decode("utf-8", errors="ignore").strip()
+            if not line:
+                continue
+
+            print("[RX<-ESP32]", line)
+
+            # prova a parse JSON
+            try:
+                msg = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+
+            # se è telemetria temperatura → inoltra al backend
+            if "room_id" in msg and "temperature" in msg:
+                url = BACKEND_BASE + TEMP_POST_ENDPOINT
+                r = requests.post(url, json=msg, headers=headers, timeout=3)
+                print("[TX->BE]", r.status_code, r.text[:120])
+
+        except Exception as e:
+            print("[ERR serial_reader]", e)
+            time.sleep(1)
+
+def backend_poller():
+    while True:
+        try:
+            url = BACKEND_BASE + CMD_GET_ENDPOINT
+            r = requests.get(url, headers=headers, timeout=3)
+
+            if r.status_code == 200 and r.text.strip():
+                data = r.json()
+
+                # supporta due formati:
+                # 1) un singolo comando dict
+                # 2) lista di comandi
+                if isinstance(data, dict):
+                    commands = [data]
+                elif isinstance(data, list):
+                    commands = data
+                else:
+                    commands = []
+
+                for cmd in commands:
+                    # cmd deve essere tipo {"room_id":1,"lights":true} o {"room_id":1,"hvac":"cool"}
+                    if isinstance(cmd, dict):
+                        send_to_esp32(cmd)
+
+        except Exception as e:
+            print("[ERR backend_poller]", e)
+
+        time.sleep(POLL_SECONDS)
+
+t1 = threading.Thread(target=serial_reader, daemon=True)
+t2 = threading.Thread(target=backend_poller, daemon=True)
+t1.start()
+t2.start()
+
+print("[RUN] Bridge attivo. Ctrl+C per uscire.")
+while True:
+    time.sleep(1)
