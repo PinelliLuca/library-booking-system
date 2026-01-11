@@ -172,7 +172,7 @@ class DemoPopulateBookings(MethodView):
                         seat_id=seat.id,
                         start_time=start,
                         end_time=start + timedelta(hours=2),
-                        status=BookingStatus.CONFIRMED
+                        status=BookingStatus.COMPLETED
                     )
                     db.session.add(booking)
                     created += 1
