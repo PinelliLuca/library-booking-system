@@ -3,11 +3,13 @@ from flask.views import MethodView
 from flask_smorest import Blueprint
 from src.backend.common.extensions import db
 from sqlalchemy import func
+
+from src.backend.common.logger import logger
 from src.backend.models import TemperatureReading
 
 temperature_bp = Blueprint("temperatures", __name__)
 # Parametri di comfort (costanti di progetto)
-COMFORT_TEMP = 22.0
+COMFORT_TEMP = 16.0
 TOLERANCE = 2.0
 
 @temperature_bp.route("/temperatures")
@@ -43,6 +45,7 @@ class TemperatureIngest(MethodView):
 
         except Exception as e:
             db.session.rollback()
+            logger.error(f"Error fetching temperature stats: {e}")
             return {"error": str(e)}, 500
 
 @temperature_bp.route("/temperatures/stats")
@@ -61,4 +64,5 @@ class TemperatureStats(MethodView):
             }, 200
 
         except Exception as e:
+            logger.error(f"Error fetching temperature stats: {e}")
             return {"error": str(e)}, 500
