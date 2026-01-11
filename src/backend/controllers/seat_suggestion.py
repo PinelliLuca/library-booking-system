@@ -20,7 +20,7 @@ class SeatSuggestionList(MethodView):
     @auth_required
     def get(self):
         """
-        GET /seat-suggestions?date=YYYY-MM-DD&top=10
+        GET form: /seat-suggestions?date=YYYY-MM-DD&top=10
         Returns saved suggestions for a date (or latest) ordered by score.
         """
         try:
@@ -50,7 +50,6 @@ class SeatSuggestionGenerate(MethodView):
     # @admin_required
     def post(self):
         """
-        POST /seat-suggestions/generate
         Admin-only. Body optional: date, hour, history_days, top_n, recent_weight
         """
         try:
@@ -74,7 +73,7 @@ class SeatSuggestionRecompute(MethodView):
     @admin_required
     def post(self):
         """
-        Admin-only forced recompute. Same params as /generate.
+         Forced recompute. Same params as /generate.
         Returns count generated.
         """
         try:
@@ -87,7 +86,7 @@ class SeatSuggestionRecompute(MethodView):
 
 @suggestion_bp.route("/seat-suggestions/<int:seat_id>/explain")
 class SeatSuggestionExplain(MethodView):
-    @auth_required
+    #@auth_required
     def get(self, seat_id):
         """
         GET /seat-suggestions/<seat_id>/explain?date=&hour=
@@ -103,7 +102,7 @@ class SeatSuggestionExplain(MethodView):
                 payload["hour"] = hour_q
 
             # reuse logic but compute only for the single seat (same algorithms)
-            suggestions_sample = _generate_suggestions_service(payload)  # cheap enough for a single seat in demo
+            suggestions_sample = _generate_suggestions_service(payload)
             # find seat in generated suggestions
             for s in suggestions_sample:
                 if s.seat_id == seat_id:
@@ -118,5 +117,5 @@ class SeatSuggestionExplain(MethodView):
         except ValueError as e:
             return {"error": str(e)}, 400
         except Exception as e:
-            logger.exception("Error explain")
+            logger.error(f"Error explain {str(e)}")
             return {"error":"Internal"}, 500

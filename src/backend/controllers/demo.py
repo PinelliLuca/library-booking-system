@@ -11,8 +11,6 @@ from src.backend.controllers.seat_suggestion import SeatSuggestionGenerate
 from werkzeug.security import generate_password_hash
 demo_bp = Blueprint("demo", __name__)
 
-# CLEAR ALL
-
 @demo_bp.route("/demo/clear-all")
 class DemoClearAll(MethodView):
     def post(self):
@@ -35,8 +33,6 @@ class DemoClearAll(MethodView):
             logger.exception("Failed to clear database")
             return {"error": "Failed to clear database", "details": str(e)}, 500
 
-
-# POPULATE ROOMS & SEATS
 
 @demo_bp.route("/demo/populate-rooms-seats")
 class DemoPopulateRoomsSeats(MethodView):
@@ -63,7 +59,6 @@ class DemoPopulateRoomsSeats(MethodView):
                 for i in range(10):
                     seat = Seat(
                         room_id=room.id,
-                        # label=f"{name[:1]}-{i+1}",
                         is_active=True, 
                         upd_user="demo",
                         upd_datetime=datetime.now()
@@ -74,10 +69,8 @@ class DemoPopulateRoomsSeats(MethodView):
             return {"message": "Rooms and seats created"}, 201
         except Exception as e:
             db.session.rollback()
-            logger.exception("Failed to populate rooms and seats")
+            logger.error(f"Failed to populate rooms and seats {str(e)}")
             return {"error": "Failed to populate rooms and seats", "details": str(e)}, 500
-
-# POPULATE USERS
 
 @demo_bp.route("/demo/populate-users")
 class DemoPopulateUsers(MethodView):
@@ -115,7 +108,7 @@ class DemoPopulateUsers(MethodView):
             db.session.rollback()
             logger.exception("Failed to populate users")
             return {"error": "Failed to populate users", "details": str(e)}, 500
-# POPULATE TEMPERATURES
+
 @demo_bp.route("/demo/populate-temperatures")
 class DemoPopulateTemperatures(MethodView):
     def post(self):
@@ -149,7 +142,6 @@ class DemoPopulateTemperatures(MethodView):
             logger.exception("Failed to populate temperatures")
             return {"error": "Failed to populate temperatures", "details": str(e)}, 500
 
-# POPULATE BOOKINGS
 
 @demo_bp.route("/demo/populate-bookings")
 class DemoPopulateBookings(MethodView):
@@ -184,7 +176,6 @@ class DemoPopulateBookings(MethodView):
             logger.exception("Failed to populate bookings")
             return {"error": "Failed to populate bookings", "details": str(e)}, 500
 
-# SET ROOM ENERGY STATE
 @demo_bp.route("/demo/set-room-energy")
 class DemoSetRoomEnergy(MethodView):
     def post(self):
@@ -215,7 +206,7 @@ class DemoSetRoomEnergy(MethodView):
 @demo_bp.route("/demo/run-scenario", methods=["POST"])
 def run_scenario():
     """
-    Esegue tutta la demo in un colpo solo.
+    Esegue tutta la demo.
     """
     try:
         DemoClearAll().post()

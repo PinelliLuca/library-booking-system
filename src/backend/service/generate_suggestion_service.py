@@ -6,7 +6,7 @@ from src.backend.models import Seat, Booking, Room, TemperatureReading, RoomEner
 
 
 def _parse_payload_date_hour(payload):
-    now = datetime.utcnow()
+    now = datetime.now()
     target_date = None
     target_hour = None
     if payload and payload.get("date"):
@@ -58,7 +58,7 @@ def _generate_suggestions_service(payload: dict):
     weeks_recent = max(1.0, history_days / 7.0)
     weeks_annual = 52.0
 
-    # SQLite weekday mapping (0=Sunday..6=Saturday)
+    # SQLite weekday mapping (0=Sunday - 6=Saturday)
     target_weekday_sqlite = (target_date.weekday() + 1) % 7
     hh = f"{target_hour:02d}"
 
@@ -130,7 +130,7 @@ def _generate_suggestions_service(payload: dict):
 
         # FINAL SCORE (weights: 0.4, 0.3, -0.3)
         score = (occupancy_probability * 0.4) + (comfort_score * 0.3) - (energy_cost * 0.3)
-        reason = f"occ={occupancy_probability:.2f},comfort={comfort_score:.2f},energy={energy_cost:.2f}"
+        reason = f"occupancy probability={occupancy_probability:.2f},comfort score={comfort_score:.2f},energy cost={energy_cost:.2f}"
 
         s = SeatSuggestion(
             seat_id=seat.id,
