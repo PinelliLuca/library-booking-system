@@ -1,13 +1,17 @@
 import logging
+import sys
 
-# Configurazione del logger
-logging.basicConfig(
-    level=logging.INFO,  # Livello di logging (INFO, DEBUG, ERROR, ecc.)
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",  
-    handlers=[
-        logging.StreamHandler()  # Invia i log alla console
-    ]
-)
-
-# Crea un'istanza del logger
 logger = logging.getLogger("library-booking-system")
+logger.setLevel(logging.DEBUG)
+
+handler = logging.StreamHandler(sys.stdout)
+handler.setLevel(logging.DEBUG)
+
+formatter = logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+handler.setFormatter(formatter)
+
+logger.handlers.clear()
+logger.addHandler(handler)
+logger.propagate = False
