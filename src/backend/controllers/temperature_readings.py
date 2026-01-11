@@ -10,7 +10,7 @@ from src.backend.models.booking import BookingStatus
 
 temperature_bp = Blueprint("temperatures", __name__)
 # Parametri di comfort (costanti di progetto)
-COMFORT_TEMP = 22.0
+COMFORT_TEMP = 2.0
 TOLERANCE = 2.0
 
 @temperature_bp.route("/temperatures")
@@ -37,9 +37,9 @@ class TemperatureIngest(MethodView):
                 Seat.room_id == room_id,
                 Booking.status == BookingStatus.CONFIRMED
             ).first()
-
+            logger.info(f"booking_active valore {booking_active}")
             # ---- verifica presenza fisica tramite seat.is_occupied ----
-            seats = Seat.query.filter_by(room_id=room_id).all()
+            #seats = Seat.query.filter_by(room_id=room_id).all()
             #presence = any([s.is_occupied for s in seats])
 
             # Se non c'è prenotazione valida o non c'è presenza => tutto OFF
