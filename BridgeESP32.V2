@@ -1,0 +1,129 @@
+import json
+import time
+import threading
+import serial
+import requests
+
+# ===== CONFIG =====
+COM_PORT = "COM6"
+BAUD = 115200
+
+BACKEND_BASE = "http://127.0.0.1:5000"
+
+# ESP32 -> Backend (telemetria)
+TEMP_POST_ENDPOINT = "/temperatures"   # POST {"room_id":1,"temperature":22.1}
+
+# Backend -> ESP32 (comandi)
+# Deve essere un endpoint che ritorna:
+#   - un dict singolo: {"room_id":1,"lights":true}
+#   - oppure una lista: [{"room_id":1,"hvac":"cool"}, {"room_id":2,"lights":false}]
+COMMANDS_GET_ENDPOINT = "/esp32/commands"   # <-- CAMBIA QUI se diverso
+
+POLL_SECONDS = 5.0
+
+# Se serve autenticazione JWT, metti qui:
+HEADERS = {
+    # "Authorization": "Bearer <TOKEN>",
+}
+
+# ===================
+
+ser = serial.Serial(COM_PORT, BAUD, timeout=1)
+time.sleep(2)
+print(f"[OK] Serial opened on {COM_PORT} @ {BAUD}")
+
+def send_to_esp32(obj: dict):
+    line = json.dumps(obj, separators=(",", ":")) + "\n"
+    ser.write(line.encode("utf-8"))
+    print("[TX->ESP32]", line.strip())
+
+def post_temp_to_backend(msg: dict):
+    url = BACKEND_BASE + TEMP_POST_ENDPOINT
+    r = requests.post(url, json=msg, headers=HEADERS, timeout=5)
+    print("[TX->BE]", r.status_code, r.text[:120])
+
+def serial_reader():
+    """Legge righe da ESP32. Se sono JSON temperatura, le inoltra al backend."""
+    while True:
+        try:
+            line = ser.readline().decode("utf-8", errors="ignore").strip()
+            if not line:
+                continue
+
+            print("[RX<-ESP32]", line)
+
+            # prova a parse JSON
+            try:
+                msg = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+
+            # Telemetria temperatura
+            if isinstance(msg, dict) and "room_id" in msg and "temperature" in msg:
+                post_temp_to_backend(msg)
+
+        except Exception as e:
+            print("[ERR serial_reader]", e)
+            time.sleep(1)
+
+def normalize_commands(data):
+    """Accetta dict o list dal backend e restituisce una lista di dict comando."""
+    if isinstance(data, dict):
+        return [data]
+    if isinstance(data, list):
+        return [x for x in data if isinstance(x, dict)]
+    return []
+
+def is_valid_command(cmd: dict) -> bool:
+    """Accetta solo comandi che il tuo sketch ESP32 capisce."""
+    if "room_id" not in cmd:
+        return False
+
+    # luci: {"room_id":2,"lights":true/false}
+    if "lights" in cmd and isinstance(cmd["lights"], bool):
+        return True
+
+    # hvac: {"room_id":1,"hvac":"heat|cool|off"}
+    if "hvac" in cmd and isinstance(cmd["hvac"], str):
+        return cmd["hvac"] in ("heat", "cool", "off")
+
+    return False
+
+def backend_poller():
+    """Ogni POLL_SECONDS chiede al backend i comandi e li inoltra all'ESP32."""
+    while True:
+        try:
+            url = BACKEND_BASE + COMMANDS_GET_ENDPOINT
+            r = requests.get(url, headers=HEADERS, timeout=5)
+
+            if r.status_code != 200:
+                print("[BE]", r.status_code, r.text[:120])
+            else:
+                # se backend ritorna vuoto, ignora
+                if not r.text.strip():
+                    time.sleep(POLL_SECONDS)
+                    continue
+
+                data = r.json()
+                commands = normalize_commands(data)
+
+                for cmd in commands:
+                    if is_valid_command(cmd):
+                        send_to_esp32(cmd)
+                    else:
+                        print("[SKIP] invalid/unhandled command from backend:", cmd)
+
+        except Exception as e:
+            print("[ERR backend_poller]", e)
+
+        time.sleep(POLL_SECONDS)
+
+# Thread
+t1 = threading.Thread(target=serial_reader, daemon=True)
+t2 = threading.Thread(target=backend_poller, daemon=True)
+t1.start()
+t2.start()
+
+print("[RUN] Bridge attivo. Ctrl+C per uscire.")
+while True:
+    time.sleep(1)
