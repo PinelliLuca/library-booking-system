@@ -107,6 +107,16 @@
           </label>
         </div>
         <div style="color:red; min-height:18px">{{ bookingError }}</div>
+
+        <div v-if="bookingSeatFutureBookings && bookingSeatFutureBookings.length" style="margin-top:10px; font-size:13px; color:#444">
+          <h4 style="margin:6px 0 6px">Prenotazioni future per questo posto</h4>
+          <ul style="margin:0 0 6px 18px; padding:0;">
+            <li v-for="b in bookingSeatFutureBookings" :key="b.id" style="margin-bottom:4px;">
+              {{ new Date(b.start_time).toLocaleString() }} - {{ new Date(b.end_time).toLocaleString() }} — {{ b.username || '—' }} <span style="color:#0b5ed7; font-weight:600; margin-left:6px;">({{ b.status }})</span>
+              <span v-if="b.is_mine" style="margin-left:6px; color:#28a745">— è tua</span>
+            </li>
+          </ul>
+        </div>
         <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:10px">
           <button @click="closeBookingModal">Annulla</button>
           <button class="primary" @click="createBooking">Conferma prenotazione</button>
@@ -173,8 +183,9 @@
           bookingSeat: null,
           bookingStart: null, // datetime-local string
           bookingEnd: null,
-          bookingError: ''
-        };
+          bookingError: '',
+          bookingSeatFutureBookings: []
+        }; 
       },
       computed: {
         gridRows() {
@@ -192,7 +203,18 @@
           return { total, occupied, free, occupancyPercent };
         },
         pendingBooking() {
-            return this.userBookings.find(b => b.status === 'pending_checkin');
+            const now = new Date();
+            return this.userBookings.find(b => {
+                if (b.status !== 'pending_checkin' || !b.is_mine) return false;
+                try {
+                    const start = new Date(b.start_time);
+                    const end = new Date(b.end_time);
+                    return start <= now && now <= end;
+                } catch (e) {
+                    // fallback: if date parse fails, consider it not yet pending
+                    return false;
+                }
+            });
         },
         groupedRooms() {
           // Group seats by room_id and chunk into rows of 5
@@ -242,10 +264,15 @@
                 alert("Questo posto è occupato (rilevato dal sensore).");
                 return;
             }
+            if (!seat.active) {
+                alert("Questo posto non è prenotabile.");
+                return;
+            }
             if (seat.booking_status) {
                 alert("Questo posto è già prenotato.");
                 return;
             }
+            console.log(this.pendingBooking);
             if (this.pendingBooking) {
                 alert("Hai già una prenotazione in attesa. Completa prima il check-in.");
                 return;
@@ -258,11 +285,14 @@
         openBookingModal(seat) {
           this.bookingSeat = seat;
           this.bookingError = '';
+          this.bookingSeatFutureBookings = [];
           const { start, end } = this.getDefaultBookingTimes();
           // datetime-local expects 'YYYY-MM-DDTHH:MM'
           this.bookingStart = start;
           this.bookingEnd = end;
           this.showBookingModal = true;
+          // populate future bookings for this seat
+          this.fetchBookingsForSeat(seat.seat_id);
         },
 
         closeBookingModal() {
@@ -340,6 +370,8 @@
               return;
             }
             // Success
+            // refresh bookings list for this seat and overall data
+            await this.fetchBookingsForSeat(this.bookingSeat.seat_id);
             this.closeBookingModal();
             alert('Prenotazione creata. Ora effettua il check-in scansionando il QR code sul posto.');
             await this.fetchUserBookings();
@@ -353,7 +385,7 @@
 
         async fetchUserBookings() {
             try {
-                const res = await this.authFetch('/bookings/');
+                const res = await this.authFetch('/bookings');
                 if (!res.ok) throw new Error('Errore nel caricamento delle prenotazioni');
                 this.userBookings = await res.json();
             } catch (err) {
@@ -372,6 +404,21 @@
             } catch (err) {
                 console.error('fetchSuggestions failed', err);
             }
+        },
+
+        async fetchBookingsForSeat(seatId) {
+          try {
+            const res = await this.authFetch(`/bookings?seat_id=${seatId}`);
+            if (!res.ok) {
+              console.error('fetchBookingsForSeat error');
+              this.bookingSeatFutureBookings = [];
+              return;
+            }
+            this.bookingSeatFutureBookings = await res.json();
+          } catch (err) {
+            console.error('fetchBookingsForSeat failed', err);
+            this.bookingSeatFutureBookings = [];
+          }
         },
 
         async fetchRooms() {
