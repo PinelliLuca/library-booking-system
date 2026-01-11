@@ -109,71 +109,49 @@
 <body>
     <div class="top-bar">
         <h1>Admin Dashboard</h1>
-        <a href="./mappa" class="nav-link">Torna alla Mappa</a>
+        <div style="display:flex; gap:12px; align-items:center">
+            <label>Da: <input type="datetime-local" id="filter-start" /></label>
+            <label>A: <input type="datetime-local" id="filter-end" /></label>
+            <label>Room: <select id="room-select"><option value="">Tutte</option></select></label>
+            <button id="refresh-btn" class="nav-link" style="background:#198754;">Aggiorna</button>
+            <a href="./mappa" class="nav-link">Torna alla Mappa</a>
+        </div>
     </div>
 
     <!-- SEZIONE UTILIZZO E OCCUPAZIONE -->
-    <h2 class="section-title">Utilizzo e Occupazione</h2>
+    <h2 class="section-title">Panoramica</h2>
     <div class="dashboard-grid">
         <div class="card">
             <h3>Panoramica Generale</h3>
-            <div class="stat"><span class="stat-label">Posti Occupati / Totali</span><span class="stat-value">68 / 150</span></div>
-            <div class="stat"><span class="stat-label">Tasso Occupazione Globale</span><span class="stat-value">45%</span></div>
-            <div class="stat"><span class="stat-label">Durata Media Permanenza</span><span class="stat-value secondary">1h 45m</span></div>
-            <div class="stat"><span class="stat-label">Tasso di "No-Show" (Oggi)</span><span class="stat-value bad">12%</span></div>
+            <div class="stat"><span class="stat-label">Posti Occupati / Totali</span><span class="stat-value" id="card-occupied">-- / --</span></div>
+            <div class="stat"><span class="stat-label">Tasso Occupazione Globale</span><span class="stat-value" id="card-occupancy-rate">--%</span></div>
+            <div class="stat"><span class="stat-label">Temperatura Media</span><span class="stat-value" id="card-avg-temp">-- °C</span></div>
+            <div class="stat"><span class="stat-label">Stanze</span><span class="stat-value" id="card-rooms">--</span></div>
         </div>
+
         <div class="card">
-            <h3>Occupazione per Sala</h3>
-            <div class="stat"><span class="stat-label">Sala Nord</span><span class="stat-value">75%</span></div>
-            <div class="stat"><span class="stat-label">Sala Est</span><span class="stat-value">50%</span></div>
-            <div class="stat"><span class="stat-label">Sala Ovest</span><span class="stat-value">25%</span></div>
-            <div class="stat"><span class="stat-label">Sala Sud</span><span class="stat-value good">90%</span></div>
-        </div>
-        <div class="card">
-            <h3>Posti "Top & Flop" (Ultimi 30gg)</h3>
-            <ul class="list">
-                <li class="list-item"><span class="label">🥇 Posto più prenotato</span> <span class="value">#12 (Sala Sud)</span></li>
-                <li class="list-item"><span class="label">🥈 2° più prenotato</span> <span class="value">#34 (Sala Sud)</span></li>
-                <li class="list-item"><span class="label">🥉 3° più prenotato</span> <span class="value">#5 (Sala Nord)</span></li>
-                <li class="list-item"><span class="label" style="color:#dc3545">🏚️ Meno prenotato</span> <span class="value">#88 (Sala Ovest)</span></li>
+            <h3 style="display:flex; align-items:center; gap:10px; justify-content:space-between">Top Prenotazioni (30gg) <button id="recompute-suggestions" class="nav-link" style="background:#ffc107;color:#000;font-size:13px;padding:6px 8px;">Rigenera suggestions</button></h3>
+            <ul class="list" id="top-booked-list">
             </ul>
         </div>
+
         <div class="card">
-            <h3>Ore di Punta (Prenotazioni di Oggi)</h3>
-            <div class="chart-placeholder">
-                [Grafico a barre: Ore del giorno vs. Numero prenotazioni]
-            </div>
+            <h3>Comandi Energetici (30gg)</h3>
+            <div class="stat"><span class="stat-label">Totale comandi</span><span class="stat-value" id="card-total-commands">--</span></div>
+            <div class="stat"><span class="stat-label">Comandi luci</span><span class="stat-value" id="card-lights-commands">--</span></div>
+            <div class="stat"><span class="stat-label">Stati correnti</span><span class="stat-value" id="card-energy-states">--</span></div>
+        </div>
+
+        <div class="card">
+            <h3>Ore di Punta (Prenotazioni)</h3>
+            <canvas id="peak-hours-chart" aria-label="Ore di punta" role="img" style="max-height:180px"></canvas>
         </div>
     </div>
 
-    <!-- SEZIONE ENERGETICA E AMBIENTALE -->
-    <h2 class="section-title">Energia e Ambiente</h2>
-    <div class="dashboard-grid">
-        <div class="card">
-            <h3>Consumi Energetici</h3>
-            <div class="stat"><span class="stat-label">Consumo Istantaneo</span><span class="stat-value">3.4 kW</span></div>
-            <div class="stat"><span class="stat-label">Consumo Totale (Oggi)</span><span class="stat-value secondary">45 kWh</span></div>
-            <div class="stat"><span class="stat-label">Picco di Consumo (Oggi)</span><span class="stat-value bad">5.1 kW</span></div>
-             <div class="stat"><span class="stat-label">Interventi Manuali/Automatici</span><span class="stat-value secondary">8 / 56</span></div>
-        </div>
-        <div class="card">
-            <h3>Stato Ambientale Sale</h3>
-            <div class="stat"><span class="stat-label">Temperatura Media</span><span class="stat-value good">22.5 °C</span></div>
-            <div class="stat"><span class="stat-label">Qualità Aria (AQI medio)</span><span class="stat-value good">35 (Buona)</span></div>
-            <div class="stat"><span class="stat-label">Umidità Media</span><span class="stat-value secondary">55%</span></div>
-        </div>
-        <div class="card">
-            <h3>Correlazione Occupazione/Energia (Sala Nord)</h3>
-            <div class="chart-placeholder">
-                [Grafico a dispersione: N° Utenti vs. Consumo kW]
-            </div>
-        </div>
-        <div class="card">
-            <h3>Andamento Temperature (Ultime 24h)</h3>
-            <div class="chart-placeholder">
-                [Grafico lineare: Andamento T° Sala Nord vs T° Sala Sud]
-            </div>
-        </div>
+    <!-- Per-room detail -->
+    <h2 class="section-title">Dettaglio Stanze</h2>
+    <div id="rooms-container" class="dashboard-grid">
+        <!-- Per-room cards will be injected here -->
     </div>
 
     <!-- SEZIONE UTENTI E OPERATIVA -->
@@ -181,26 +159,256 @@
     <div class="dashboard-grid">
         <div class="card">
             <h3>Panoramica Utenti</h3>
-            <div class="stat"><span class="stat-label">Utenti Attivi (30gg)</span><span class="stat-value">98</span></div>
-            <div class="stat"><span class="stat-label">Nuovi Utenti (7gg)</span><span class="stat-value good">14</span></div>
-            <div class="stat"><span class="stat-label">Totale Utenti registrati</span><span class="stat-value secondary">234</span></div>
-        </div>
-        <div class="card">
-            <h3>Distribuzione Ruoli</h3>
-            <div class="stat"><span class="stat-label">Studenti</span><span class="stat-value">210</span></div>
-            <div class="stat"><span class="stat-label">Staff</span><span class="stat-value">12</span></div>
-            <div class="stat"><span class="stat-label">Admin</span><span class="stat-value">2</span></div>
+            <div class="stat"><span class="stat-label">Utenti Attivi (30gg)</span><span class="stat-value" id="users-active">--</span></div>
+            <div class="stat"><span class="stat-label">Nuovi Utenti (7gg)</span><span class="stat-value" id="users-new">--</span></div>
+            <div class="stat"><span class="stat-label">Totale Utenti registrati</span><span class="stat-value" id="users-total">--</span></div>
         </div>
         <div class="card">
             <h3>Stato Dispositivi e Manutenzione</h3>
-            <div class="stat"><span class="stat-label">Sensori Offline</span><span class="stat-value bad">2</span></div>
-            <div class="stat"><span class="stat-label">Posti disattivati</span><span class="stat-value secondary">3</span></div>
-             <ul class="list" style="margin-top: 10px;">
-                <li class="list-item"><span class="label">⚠️ Sensore T° - Sala Est</span> <span class="value">Offline (3h)</span></li>
-                <li class="list-item"><span class="label">⚠️ Sensore Posto #45</span> <span class="value">Offline (2gg)</span></li>
+            <div class="stat"><span class="stat-label">Sensori Offline</span><span class="stat-value bad" id="sensors-offline">--</span></div>
+            <div class="stat"><span class="stat-label">Posti disattivati</span><span class="stat-value secondary" id="seats-disabled">--</span></div>
+             <ul class="list" style="margin-top: 10px;" id="maintenance-list">
             </ul>
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+    // Admin dashboard JS
+    function getToken() { return localStorage.getItem('iot_jwt'); }
+    function logout() { localStorage.removeItem('iot_jwt'); window.location.href = './login'; }
+    async function authFetch(url, opts = {}) {
+        const token = getToken();
+        if (!token) { logout(); throw new Error('Token mancante'); }
+        opts.headers = Object.assign({}, opts.headers || {});
+        opts.headers['Authorization'] = `Bearer ${token}`;
+        const res = await fetch(url, opts);
+        if (res.status === 401 || res.status === 422) { logout(); throw new Error('Token non valido o scaduto'); }
+        return res;
+    }
+
+    function isoFromLocal(input) {
+        if (!input) return null;
+        // input is 'YYYY-MM-DDTHH:MM', append seconds and timezone offset
+        const val = input.value || input;
+        const offsetMin = -new Date().getTimezoneOffset();
+        const sign = offsetMin >= 0 ? '+' : '-';
+        const abs = Math.abs(offsetMin);
+        const hh = String(Math.floor(abs/60)).padStart(2,'0');
+        const mm = String(abs%60).padStart(2,'0');
+        return `${val}:00${sign}${hh}:${mm}`;
+    }
+
+    async function fetchOverview() {
+        const start = document.getElementById('filter-start').value;
+        const end = document.getElementById('filter-end').value;
+        const qs = [];
+        if (start) qs.push('start='+encodeURIComponent(isoFromLocal(start)));
+        if (end) qs.push('end='+encodeURIComponent(isoFromLocal(end)));
+        const url = '/admin/stats/overview' + (qs.length?('?'+qs.join('&')):'');
+        const r = await authFetch(url);
+        if (!r.ok) throw new Error('Failed to fetch overview');
+        return r.json();
+    }
+
+    async function fetchTopBookings() {
+        const r = await authFetch('/admin/stats/bookings');
+        if (!r.ok) return [];
+        return r.json();
+    }
+
+    async function fetchEnergy(roomId) {
+        const url = '/admin/stats/energy' + (roomId?('?room_id='+roomId):'');
+        const r = await authFetch(url);
+        if (!r.ok) return null;
+        return r.json();
+    }
+
+    async function fetchRooms() {
+        const r = await authFetch('/rooms');
+        if (!r.ok) throw new Error('Failed to fetch rooms');
+        return r.json();
+    }
+
+    function renderOverview(data) {
+        document.getElementById('card-occupied').innerText = data.global.occupied_now + ' / ' + data.global.total_seats;
+        document.getElementById('card-occupancy-rate').innerText = Math.round(data.global.occupancy_rate) + '%';
+        document.getElementById('card-avg-temp').innerText = (data.global.avg_temp !== null) ? data.global.avg_temp.toFixed(1)+' °C' : '--';
+        document.getElementById('card-rooms').innerText = data.global.total_rooms;
+    }
+
+    let peakChart = null;
+    function renderPeakHoursChart(series) {
+        const ctx = document.getElementById('peak-hours-chart').getContext('2d');
+        const labels = series.map(s=> new Date(s.start).toLocaleString());
+        const data = series.map(s=> s.occupied_seats);
+        if (peakChart) peakChart.destroy();
+        peakChart = new Chart(ctx, {
+            type: 'bar',
+            data: { labels, datasets: [{ label: 'Occupati', data, backgroundColor: '#0d6efd' }] },
+            options: { responsive:true, maintainAspectRatio:false }
+        });
+    }
+
+    // Destroy any chart bound to a canvas element if present
+    function destroyChartIfExists(canvasEl) {
+        if (!canvasEl) return;
+        try {
+            const existing = Chart.getChart(canvasEl);
+            if (existing) existing.destroy();
+        } catch (err) {
+            // ignore
+            console.debug('destroyChartIfExists error', err);
+        }
+    }
+
+    function makeRoomCard(room) {
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.innerHTML = `
+            <h3>${room.name}</h3>
+            <div class="stat"><span class="stat-label">Posti</span><span class="stat-value">${room.total_seats}</span></div>
+            <div class="stat"><span class="stat-label">Occupati</span><span class="stat-value">${room.occupied_now}</span></div>
+            <div class="stat"><span class="stat-label">Occupancy %</span><span class="stat-value">${Math.round(room.occupancy_rate)}%</span></div>
+            <div class="stat"><span class="stat-label">Avg Temp</span><span class="stat-value">${room.avg_temp !== null?room.avg_temp.toFixed(1)+' °C':'--'}</span></div>
+            <div style="margin-top:8px; display:flex; gap:8px; align-items:center">
+                <button data-room-id="${room.id}" class="energy-toggle">Toggle Lights</button>
+                <span id="room-${room.id}-lights" style="margin-left:auto">Luci: ${room.lights_on? 'ON': 'OFF'}</span>
+            </div>
+            <canvas id="room-${room.id}-occupancy-chart" style="max-height:160px; margin-top:8px"></canvas>
+            <canvas id="room-${room.id}-temp-chart" style="max-height:160px; margin-top:8px"></canvas>
+        `;
+        return div;
+    }
+
+    async function toggleRoomLight(roomId, currentState) {
+        const payload = { room_id: roomId, lights_on: !currentState };
+        const r = await authFetch('/demo/set-room-energy', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+        if (!r.ok) throw new Error('Failed to toggle lights');
+        return r.json();
+    }
+
+    async function fetchAndRender() {
+        try {
+            const roomsData = await fetchOverview();
+            renderOverview(roomsData);
+
+            // populate room selector
+            const roomSelect = document.getElementById('room-select');
+            roomSelect.innerHTML = '<option value="">Tutte</option>';
+            roomsData.rooms.forEach(r => {
+                const o = document.createElement('option'); o.value = r.id; o.text = r.name; roomSelect.appendChild(o);
+            });
+
+            // render rooms: destroy any existing room charts first
+            const container = document.getElementById('rooms-container');
+            document.querySelectorAll('canvas[id^="room-"]').forEach(c => { destroyChartIfExists(c); });
+            container.innerHTML = '';
+            roomsData.rooms.forEach(r => container.appendChild(makeRoomCard(r)));
+
+            // bind energy toggle handlers
+            document.querySelectorAll('.energy-toggle').forEach(btn => {
+                btn.onclick = async (ev) => {
+                    const rid = Number(btn.dataset.roomId);
+                    const span = document.getElementById(`room-${rid}-lights`);
+                    const current = span.innerText.includes('ON');
+                    await toggleRoomLight(rid, current);
+                    // refresh energy state
+                    const energy = await fetchEnergy(rid);
+                    if (energy && energy.states && energy.states.length) {
+                        const s = energy.states.find(x=> x.room_id === rid) || energy.states[0];
+                        span.innerText = 'Luci: ' + (s.lights_on? 'ON':'OFF');
+                    }
+                };
+            });
+
+            // fetch top bookings
+            const top = await fetchTopBookings();
+            const list = document.getElementById('top-booked-list'); list.innerHTML = '';
+            if (top && top.top_seats) {
+                top.top_seats.forEach(t => { const li = document.createElement('li'); li.className='list-item'; li.innerHTML=`<span class="label">#${t.seat_id}</span><span class="value">${t.count}</span>`; list.appendChild(li); });
+            }
+
+            // fetch occupancy series for peak chart (global)
+            const occ = await authFetch('/admin/stats/occupancy');
+            if (occ.ok) {
+                const data = await occ.json();
+                renderPeakHoursChart(data.series || []);
+            }
+
+            // fetch energy summary
+            const energy = await fetchEnergy();
+            if (energy) {
+                document.getElementById('card-total-commands').innerText = energy.total_commands;
+                document.getElementById('card-lights-commands').innerText = energy.lights_commands;
+                document.getElementById('card-energy-states').innerText = energy.states.map(s=>`R${s.room_id}:${s.lights_on? 'ON':'OFF'}`).join(', ');
+            }
+
+            // render per-room time series (occupancy and temp)
+            for (const r of roomsData.rooms) {
+                    const seriesOcc = await (await authFetch(`/admin/stats/occupancy?room_id=${r.id}&resolution=hour`)).json();
+                const occCanvas = document.getElementById(`room-${r.id}-occupancy-chart`);
+                destroyChartIfExists(occCanvas);
+                const ctxOcc = occCanvas.getContext('2d');
+                new Chart(ctxOcc, { type: 'line', data: { labels: seriesOcc.series.map(s=> new Date(s.start).toLocaleString()), datasets:[{label:'Occupati', data: seriesOcc.series.map(s=>s.occupied_seats), borderColor:'#0d6efd', fill:false}] }, options:{responsive:true, maintainAspectRatio:false} });
+
+                const seriesTemp = await (await authFetch(`/admin/stats/temperatures?room_id=${r.id}&resolution=hour`)).json();
+                const tempCanvas = document.getElementById(`room-${r.id}-temp-chart`);
+                destroyChartIfExists(tempCanvas);
+                const ctxTemp = tempCanvas.getContext('2d');
+                new Chart(ctxTemp, { type: 'line', data: { labels: seriesTemp.series.map(s=> new Date(s.start).toLocaleString()), datasets:[{label:'T°', data: seriesTemp.series.map(s=>s.avg_temp), borderColor:'#198754', fill:false}] }, options:{responsive:true, maintainAspectRatio:false} });
+            }
+
+        } catch (err) {
+            console.error('Dashboard load failed', err);
+            alert('Errore nel caricamento della dashboard: '+err.message);
+        }
+    }
+
+    document.getElementById('refresh-btn').addEventListener('click', fetchAndRender);
+    
+    async function recomputeSuggestions() {
+        const btn = document.getElementById('recompute-suggestions');
+        btn.disabled = true;
+        const origText = btn.innerText;
+        btn.innerText = 'Generazione...';
+        try {
+            const r = await authFetch('/seat-suggestions/recompute', { method: 'POST' });
+            if (!r.ok) {
+                const err = await r.json().catch(()=>({}));
+                throw new Error(err.error || 'Errore durante la rigenerazione');
+            }
+            const data = await r.json().catch(()=>null);
+            const generated = data && data.generated !== undefined ? data.generated : '?';
+            alert(`Recompute completato: ${generated} suggerimenti generati`);
+            await fetchAndRender();
+        } catch (err) {
+            console.error('Recompute failed', err);
+            alert('Recompute failed: ' + (err.message || ''));
+        } finally {
+            btn.disabled = false;
+            btn.innerText = origText;
+        }
+    }
+
+    document.getElementById('recompute-suggestions').addEventListener('click', recomputeSuggestions);
+
+    // init on load
+    (async () => {
+        try {
+            const token = getToken(); if (!token) { logout(); return; }
+            // prefill last 24h
+            const now = new Date();
+            const start = new Date(now.getTime() - 24*60*60*1000);
+            function toLocalInput(d){ const yyyy=d.getFullYear(); const mm=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0'); const hh=String(d.getHours()).padStart(2,'0'); const min=String(d.getMinutes()).padStart(2,'0'); return `${yyyy}-${mm}-${dd}T${hh}:${min}`; }
+            document.getElementById('filter-start').value = toLocalInput(start);
+            document.getElementById('filter-end').value = toLocalInput(now);
+
+            await fetchAndRender();
+        } catch (e) {
+            console.error(e);
+        }
+    })();
+    </script>
 </body>
 </html>

@@ -18,6 +18,7 @@ from src.backend.controllers.room_controller import room_bp
 from src.backend.controllers.energy_command import energy_bp
 from src.backend.controllers.seat_suggestion import suggestion_bp
 from src.backend.controllers.temperature_readings import temperature_bp
+from src.backend.controllers.admin_stats import admin_bp
 from src.backend.job.scheduler import close_expired_bookings
 
 # Carica variabili da .env
@@ -50,6 +51,7 @@ app.register_blueprint(room_bp)
 app.register_blueprint(energy_bp)
 app.register_blueprint(suggestion_bp)
 app.register_blueprint(demo_bp)
+app.register_blueprint(admin_bp)
 app.register_blueprint(temperature_bp)
 # Configurazione SQLite
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'instance')), 'iot.db')}"
