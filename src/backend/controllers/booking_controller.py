@@ -226,19 +226,3 @@ class BookingForceMove(MethodView):
             return {"error": "Database error", "details": str(e)}, 500
 
 
-@booking_bp.route("/bookings/force-move")
-class BookingForceMove(MethodView):
-    def post(self):
-        try:
-            data = request.get_json()
-            is_occupied = data.get("is_occupied")
-            if not is_occupied:
-                pass
-                #se mi arriva un segnale che mi dice che la sedia è stata liberata
-                # cerco l'utente seduto in quella prenotazione
-                # invio una mail dove dico che a causa del fatto che si è alzato per troppo tempo il posto è stato liberato
-                # cerco la prenotazione in booking e libero il posto
-            return 201
-        except Exception as e:
-            logger.exception(e)
-            raise
