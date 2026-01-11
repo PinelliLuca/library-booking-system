@@ -30,7 +30,7 @@ class TemperatureIngest(MethodView):
 
             # logica HVAC
             if temperature > COMFORT_TEMP + TOLERANCE:
-                hvac_action = "cold"
+                hvac_action = "cool"
             elif temperature < COMFORT_TEMP - TOLERANCE:
                 hvac_action = "heat"
             else:

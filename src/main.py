@@ -50,7 +50,7 @@ app.register_blueprint(room_bp)
 app.register_blueprint(energy_bp)
 app.register_blueprint(suggestion_bp)
 app.register_blueprint(demo_bp)
-app.register_blueprint(temperature_bp, url_prefix="/api")
+app.register_blueprint(temperature_bp)
 # Configurazione SQLite
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'instance')), 'iot.db')}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
