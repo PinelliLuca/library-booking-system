@@ -41,7 +41,7 @@ def get_all_seats():
                 "room_id": seat.room_id,
                 "active": seat.is_active,
                 "booking_status": booking_status if booking_status else None,
-                "real_occupancy": seat.is_occupied  # campo derivato
+                "is_occupied": seat.is_occupied
             })
 
         return jsonify(response), 200

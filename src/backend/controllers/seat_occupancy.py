@@ -21,7 +21,7 @@ class SeatOccupancyIngest(MethodView):
 
     def post(self):
         data = request.get_json()
-        now = datetime.utcnow()
+        now = datetime.now()
 
         try:
             device_id = data["device_id"]
@@ -39,7 +39,7 @@ class SeatOccupancyIngest(MethodView):
                 Booking.start_time <= now,
                 Booking.end_time >= now
             ).first()
-
+            logger.info(f"Occupancy booking: {booking}")
             # CASO 1: qualcuno si siede → confermo la prenotazione
             if is_occupied:
                 if booking:
@@ -67,6 +67,7 @@ class SeatOccupancyIngest(MethodView):
                     send_email(
                         subject=EMAIL_FORCE_RELEASE["subject"],
                         body=EMAIL_FORCE_RELEASE["body"].format(
+                            user_name=user.username,
                             seat_id=seat.id,
                             end_time=booking.end_time.strftime("%H:%M")
                         ),
