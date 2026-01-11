@@ -112,7 +112,6 @@
         <div style="display:flex; gap:12px; align-items:center">
             <label>Da: <input type="datetime-local" id="filter-start" /></label>
             <label>A: <input type="datetime-local" id="filter-end" /></label>
-            <label>Room: <select id="room-select"><option value="">Tutte</option></select></label>
             <button id="refresh-btn" class="nav-link" style="background:#198754;">Aggiorna</button>
             <a href="./mappa" class="nav-link">Torna alla Mappa</a>
         </div>
@@ -123,10 +122,12 @@
     <div class="dashboard-grid">
         <div class="card">
             <h3>Panoramica Generale</h3>
+            <div class="stat"><span class="stat-label">Stanze</span><span class="stat-value" id="card-rooms">--</span></div>
             <div class="stat"><span class="stat-label">Posti Occupati / Totali</span><span class="stat-value" id="card-occupied">-- / --</span></div>
             <div class="stat"><span class="stat-label">Tasso Occupazione Globale</span><span class="stat-value" id="card-occupancy-rate">--%</span></div>
             <div class="stat"><span class="stat-label">Temperatura Media</span><span class="stat-value" id="card-avg-temp">-- °C</span></div>
-            <div class="stat"><span class="stat-label">Stanze</span><span class="stat-value" id="card-rooms">--</span></div>
+            <div class="stat"><span class="stat-label">Temperatura Massima</span><span class="stat-value" id="card-max-temp">-- °C</span></div>
+            <div class="stat"><span class="stat-label">Temperatura Minima</span><span class="stat-value" id="card-min-temp">-- °C</span></div>
         </div>
 
         <div class="card">
@@ -224,6 +225,33 @@
         return r.json();
     }
 
+    // Fetch global temperature statistics (avg/max/min)
+    async function fetchTemperatureStats() {
+        try {
+            const r = await authFetch('/temperatures/stats');
+            if (!r.ok) return null;
+            return r.json();
+        } catch (err) {
+            console.error('fetchTemperatureStats error', err);
+            return null;
+        }
+    }
+
+    function renderTemperatureStats(data) {
+        const avgEl = document.getElementById('card-avg-temp');
+        const maxEl = document.getElementById('card-max-temp');
+        const minEl = document.getElementById('card-min-temp');
+        if (!data) {
+            if (avgEl) avgEl.innerText = '--';
+            if (maxEl) maxEl.innerText = '--';
+            if (minEl) minEl.innerText = '--';
+            return;
+        }
+        if (avgEl) avgEl.innerText = (data.average_temperature !== null) ? data.average_temperature.toFixed(1) + ' °C' : '--';
+        if (maxEl) maxEl.innerText = (data.max_temperature !== null) ? data.max_temperature.toFixed(1) + ' °C' : '--';
+        if (minEl) minEl.innerText = (data.min_temperature !== null) ? data.min_temperature.toFixed(1) + ' °C' : '--';
+    }
+
     async function fetchRooms() {
         const r = await authFetch('/rooms');
         if (!r.ok) throw new Error('Failed to fetch rooms');
@@ -233,7 +261,7 @@
     function renderOverview(data) {
         document.getElementById('card-occupied').innerText = data.global.occupied_now + ' / ' + data.global.total_seats;
         document.getElementById('card-occupancy-rate').innerText = Math.round(data.global.occupancy_rate) + '%';
-        document.getElementById('card-avg-temp').innerText = (data.global.avg_temp !== null) ? data.global.avg_temp.toFixed(1)+' °C' : '--';
+        // document.getElementById('card-avg-temp').innerText = (data.global.avg_temp !== null) ? data.global.avg_temp.toFixed(1)+' °C' : '--';
         document.getElementById('card-rooms').innerText = data.global.total_rooms;
     }
 
@@ -271,10 +299,6 @@
             <div class="stat"><span class="stat-label">Occupati</span><span class="stat-value">${room.occupied_now}</span></div>
             <div class="stat"><span class="stat-label">Occupancy %</span><span class="stat-value">${Math.round(room.occupancy_rate)}%</span></div>
             <div class="stat"><span class="stat-label">Avg Temp</span><span class="stat-value">${room.avg_temp !== null?room.avg_temp.toFixed(1)+' °C':'--'}</span></div>
-            <div style="margin-top:8px; display:flex; gap:8px; align-items:center">
-                <button data-room-id="${room.id}" class="energy-toggle">Toggle Lights</button>
-                <span id="room-${room.id}-lights" style="margin-left:auto">Luci: ${room.lights_on? 'ON': 'OFF'}</span>
-            </div>
             <canvas id="room-${room.id}-occupancy-chart" style="max-height:160px; margin-top:8px"></canvas>
             <canvas id="room-${room.id}-temp-chart" style="max-height:160px; margin-top:8px"></canvas>
         `;
@@ -293,34 +317,19 @@
             const roomsData = await fetchOverview();
             renderOverview(roomsData);
 
-            // populate room selector
-            const roomSelect = document.getElementById('room-select');
-            roomSelect.innerHTML = '<option value="">Tutte</option>';
-            roomsData.rooms.forEach(r => {
-                const o = document.createElement('option'); o.value = r.id; o.text = r.name; roomSelect.appendChild(o);
-            });
+            // fetch and render global temperature stats
+            try {
+                const tstats = await fetchTemperatureStats();
+                renderTemperatureStats(tstats);
+            } catch (err) {
+                console.warn('Temperature stats unavailable', err);
+            }
 
             // render rooms: destroy any existing room charts first
             const container = document.getElementById('rooms-container');
             document.querySelectorAll('canvas[id^="room-"]').forEach(c => { destroyChartIfExists(c); });
             container.innerHTML = '';
             roomsData.rooms.forEach(r => container.appendChild(makeRoomCard(r)));
-
-            // bind energy toggle handlers
-            document.querySelectorAll('.energy-toggle').forEach(btn => {
-                btn.onclick = async (ev) => {
-                    const rid = Number(btn.dataset.roomId);
-                    const span = document.getElementById(`room-${rid}-lights`);
-                    const current = span.innerText.includes('ON');
-                    await toggleRoomLight(rid, current);
-                    // refresh energy state
-                    const energy = await fetchEnergy(rid);
-                    if (energy && energy.states && energy.states.length) {
-                        const s = energy.states.find(x=> x.room_id === rid) || energy.states[0];
-                        span.innerText = 'Luci: ' + (s.lights_on? 'ON':'OFF');
-                    }
-                };
-            });
 
             // fetch top bookings
             const top = await fetchTopBookings();
