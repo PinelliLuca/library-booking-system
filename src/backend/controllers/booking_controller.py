@@ -20,7 +20,14 @@ class BookingList(MethodView):
 
     @jwt_required()
     def get(self):
-        """Get current active bookings for the logged-in user"""
+        """Return bookings. By default returns active/future bookings for all seats.
+
+        Optional query params:
+          - seat_id: filter by seat id
+          - future_only: 'true' or 'false' (default 'true') -> filters bookings with end_time >= now
+
+        Each booking includes 'username' and 'is_mine' boolean to let the client highlight user's bookings.
+        """
         try:
             username = get_jwt_identity()
             user = User.query.filter_by(username=username).first()
@@ -28,28 +35,33 @@ class BookingList(MethodView):
             if not user:
                 return {"error": "User not found"}, 404
 
+            seat_id = request.args.get('seat_id', type=int)
+            future_only = request.args.get('future_only', 'true').lower() in ('1', 'true', 'yes')
+
             now = datetime.datetime.now()
+            q = Booking.query
 
-            bookings = Booking.query.filter(
-                Booking.user_id == user.id,
-                Booking.start_time <= now,
-                Booking.end_time >= now,
-                Booking.status.in_([
-                    BookingStatus.PENDING_CHECKIN,
-                    BookingStatus.CONFIRMED
-                ])
-            ).all()
+            if seat_id:
+                q = q.filter(Booking.seat_id == seat_id)
 
-            return [
-                {
+            if future_only:
+                q = q.filter(Booking.end_time >= now)
+
+            bookings = q.all()
+
+            result = []
+            for b in bookings:
+                result.append({
                     "id": b.id,
                     "seat_id": b.seat_id,
                     "start_time": b.start_time.isoformat(),
                     "end_time": b.end_time.isoformat(),
-                    "status": b.status
-                }
-                for b in bookings
-            ], 200
+                    "status": b.status,
+                    "username": b.user.username if getattr(b, 'user', None) else None,
+                    "is_mine": b.user_id == user.id
+                })
+
+            return result, 200
 
         except SQLAlchemyError as e:
             return {"error": "Database error", "details": str(e)}, 500
