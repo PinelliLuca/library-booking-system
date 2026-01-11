@@ -67,6 +67,7 @@ class SeatOccupancyIngest(MethodView):
                     send_email(
                         subject=EMAIL_FORCE_RELEASE["subject"],
                         body=EMAIL_FORCE_RELEASE["body"].format(
+                            user_name=user.username,
                             seat_id=seat.id,
                             end_time=booking.end_time.strftime("%H:%M")
                         ),

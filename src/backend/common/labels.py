@@ -27,8 +27,8 @@ EMAIL_FORCE_RELEASE = {
     "subject": "Posto liberato per assenza prolungata",
     "body": (
         "Ciao {user_name},\n\n"
-        "la tua prenotazione per il posto {seat_code} "
-        "dalle {start_time} è stata annullata automaticamente.\n\n"
+        "la tua prenotazione per il posto {seat_id} "
+        "è stata annullata automaticamente.\n\n"
         "Il sistema ha rilevato un'assenza prolungata dalla postazione "
         "oltre il tempo consentito.\n\n"
          "La prenotazione era valida fino alle {end_time}."
